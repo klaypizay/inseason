@@ -46,3 +46,21 @@ For the two-coach manual check: sign in separately as both seeded coaches; each 
 - No real youth data until the original privacy/vendor/retention/coaching and security launch gates are resolved. M0 does not implement privacy deletion or operational backups.
 
 Next milestone: **M1 — coach/team onboarding and assessment inputs**.
+
+## Syncing with GitHub
+
+This folder is connected to the private repository [klaypizay/basketballcoach.ing](https://github.com/klaypizay/basketballcoach.ing), with local `main` tracking `origin/main`.
+
+After making changes, run these commands from this project folder:
+
+```sh
+git status
+git add .
+git diff --cached --stat
+git commit -m "Describe your changes"
+git push
+```
+
+`commit` saves a local version; `push` uploads committed changes to GitHub. Saving a file alone does not sync it. To download changes from GitHub when your working tree is clean, use `git pull --ff-only`.
+
+`.env.local`, installed dependencies, build output and test artifacts are ignored. `.env.example` contains placeholders and is tracked. Check `git status` before committing; never force-add secrets. GitHub Actions runs the foundation checks on each push.

@@ -6,9 +6,10 @@ Status: implementation available; **M0 is not fully signed off**. Live Supabase/
 
 - Formatting, ESLint, TypeScript and Next.js production build passed.
 - Vitest: **10 passed**. The actual migration builds an empty embedded PostgreSQL database. Tests cover two-way tenant isolation, direct and nested foreign IDs, generation status reads/writes, tenant-safe foreign keys, session expiry, revoked-cookie replay and repeatable synthetic seeds. All six AI fixture actions are deterministic drafts.
-- Playwright using installed Edge: **4 browser assertions passed** across desktop/mobile: unauthenticated redirect, accessible form/keyboard navigation, no horizontal overflow and recoverable sign-in failure. **2 live managed-login tests skipped** because test-coach credentials are absent. The Windows web-server teardown hung and the runner was interrupted; do not confuse passing test assertions with a clean runner shutdown.
+- Playwright using installed Edge: **4 browser assertions passed** across desktop/mobile: unauthenticated redirect, accessible form/keyboard navigation, no horizontal overflow and recoverable sign-in failure. **2 live managed-login tests skipped** because test-coach credentials are absent. The local Windows web-server teardown hung and the runner was interrupted. The same checks subsequently completed successfully in GitHub's Linux CI.
+- GitHub CI [run 35185682954](https://github.com/klaypizay/basketballcoach.ing/actions/runs/35185682954): **passed**, including clean install, formatting, lint, typecheck, tests, production build, Chromium browser checks and dependency audit.
 - Rafter local pattern-based secrets scan: **0 findings**. This respects `.gitignore`, including `.env.local`. It is secrets hygiene only, not SAST/SCA.
-- Rafter fast remote scan: **not run**. Automatic approval review rejected the attempted operation because sending private source to Rafter was not explicitly authorized. Approval has been requested. The CLI also requires a hosted repository; this directory currently has no Git repository/remote. An API key alone is insufficient.
+- Rafter fast remote scan: **submitted, then failed**. After authorization and the initial private GitHub push, scan `9a6dd7cd-2dbc-4cfb-b376-57d7a8e997d4` targeted `klaypizay/basketballcoach.ing`, branch `main`, initial commit `fb706d4`. The CLI returned only `{"status":"failed"}` without findings or a reason. This is not a clean scan. Check the Rafter dashboard and private-repository access before retrying; access failure is a possibility, not a confirmed diagnosis. No GitHub credentials were forwarded to Rafter.
 - Supabase URL, publishable key and Rafter key are present. Database URLs and seed-coach UUIDs remain placeholders. Actual secret values were not printed, copied into documentation or committed.
 
 ## Rafter structured code review
@@ -30,6 +31,6 @@ Reviewed the auth/storage/threat design and web-app, JavaScript tooling and fixt
 
 1. Configure `MIGRATION_DATABASE_URL` for a synthetic development database. Run the migration, then enable and password the `season_coach_app` runtime role as described in README. Set `DATABASE_URL` to that restricted role.
 2. Provision two synthetic managed-auth coaches and set their UUIDs in `SEED_COACH_A_ID` / `SEED_COACH_B_ID`. Run the seed script. Supply `E2E_COACH_EMAIL` and `E2E_COACH_PASSWORD` in the test process environment and run the managed-login browser checks.
-3. Explicitly authorize the standard remote Rafter scan and identify/provision the hosted repository containing this exact code, with secrets excluded. Do not publish or push the project merely to make the scanner work without authorization. Run the fast scan and resolve findings.
+3. Diagnose the failed Rafter scan through its dashboard/private-repository access settings, rerun the fast scan against the current source and resolve findings. Source scanning is authorized; paid Plus scans still require separate approval.
 
 See [README](../README.md) for setup commands and [design](M0-design.md) for remaining pilot requirements.
