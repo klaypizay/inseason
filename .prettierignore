@@ -1,0 +1,9 @@
+node_modules
+.next
+package-lock.json
+md files
+test-results
+playwright-report
+*.tsbuildinfo
+AGENTS.md
+CLAUDE.md
