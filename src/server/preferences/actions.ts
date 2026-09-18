@@ -47,3 +47,26 @@ export async function saveLibraryItem(id: string, input: unknown) {
     return { error: message(e) };
   }
 }
+
+export async function loadSettingsSetup() {
+  try {
+    return {
+      view: await withSession(database, await sessionToken(), (r) =>
+        r.onboarding().load(),
+      ),
+    };
+  } catch (e) {
+    return { error: message(e) };
+  }
+}
+export async function manageFolder(input: unknown) {
+  try {
+    return {
+      folders: await withSession(database, await sessionToken(), (r) =>
+        r.library().manageFolder(input),
+      ),
+    };
+  } catch (e) {
+    return { error: message(e) };
+  }
+}

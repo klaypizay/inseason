@@ -680,3 +680,89 @@ it("organizes roadmap generations, blocks foreign access and protects the active
     ),
   ).toBeTruthy();
 });
+
+it("manages empty folders with ownership, revisions, and lossless item moves", async () => {
+  const a = await fixture(),
+    b = await fixture();
+  const create = () =>
+    withSession(db, a.token, (r) =>
+      r.library().manageFolder({ action: "create", name: "Summer" }),
+    );
+  const [folder] = await create();
+  expect((await create()).length).toBe(1);
+  expect(await withSession(db, b.token, (r) => r.library().folders())).toEqual(
+    [],
+  );
+  await expect(
+    withSession(db, b.token, (r) =>
+      r.library().manageFolder({
+        action: "delete",
+        id: folder.id,
+        revision: folder.revision,
+      }),
+    ),
+  ).rejects.toThrow();
+  const v = await withSession(db, a.token, (r) => r.roadmap().get(a.roadmap));
+  const item = await withSession(db, a.token, (r) =>
+    r.library().item(v.version.generationId!),
+  );
+  const moved = await withSession(db, a.token, (r) =>
+    r.library().save(item.id, {
+      name: item.name,
+      folder: "Summer",
+      state: "active",
+      revision: item.revision,
+    }),
+  );
+  const [renamed] = await withSession(db, a.token, (r) =>
+    r.library().manageFolder({
+      action: "rename",
+      id: folder.id,
+      revision: folder.revision,
+      name: "Fall",
+    }),
+  );
+  const updated = await withSession(db, a.token, (r) =>
+    r.library().item(item.id),
+  );
+  expect(updated.folder).toBe("Fall");
+  expect(updated.revision).toBeGreaterThan(moved.revision);
+  await expect(
+    withSession(db, a.token, (r) =>
+      r.library().manageFolder({
+        action: "delete",
+        id: folder.id,
+        revision: folder.revision,
+      }),
+    ),
+  ).rejects.toThrow(/another tab/);
+  await withSession(db, a.token, (r) =>
+    r.library().manageFolder({ action: "create", name: "Winter" }),
+  );
+  await expect(
+    withSession(db, a.token, (r) =>
+      r.library().manageFolder({
+        action: "rename",
+        id: renamed.id,
+        revision: renamed.revision,
+        name: "Winter",
+      }),
+    ),
+  ).rejects.toThrow(/already exists/);
+  await withSession(db, a.token, (r) =>
+    r.library().manageFolder({
+      action: "delete",
+      id: renamed.id,
+      revision: renamed.revision,
+    }),
+  );
+  const unfiled = await withSession(db, a.token, (r) =>
+    r.library().item(item.id),
+  );
+  expect(unfiled.folder).toBe("");
+  expect(unfiled.isCurrent).toBe(true);
+  expect(
+    (await withSession(db, a.token, (r) => r.roadmap().get(a.roadmap))).version
+      .id,
+  ).toBe(a.roadmap);
+});

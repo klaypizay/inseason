@@ -16,6 +16,7 @@ export default async function SeasonPage() {
       const { teamId, seasonId } = setup.data;
       return {
         setup,
+        folders: await r.library().folders(),
         roadmap: seasonId ? await r.roadmap().summary(seasonId) : null,
         runs: teamId && seasonId ? await r.library().list(seasonId) : [],
       };
@@ -88,7 +89,7 @@ export default async function SeasonPage() {
           />
         )}
       </section>
-      <RoadmapLibrary items={result.runs} />
+      <RoadmapLibrary items={result.runs} folders={result.folders} />
     </main>
   );
 }

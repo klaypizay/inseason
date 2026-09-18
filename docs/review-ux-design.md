@@ -32,3 +32,30 @@ labels cannot execute HTML or control SQL; Trash cannot silently disable an acti
 roadmap or remove accepted history. Existing deployment/privacy/coaching launch
 gates remain. Verify two-coach access, active-plan protection, modal keyboard/scroll
 behavior, persistence, dates and existing acceptance before Rafter remote review.
+
+## Settings tabs and explicit folder controls
+
+Reuse the existing version-checked setup editor inside the global Settings
+popup, with Coach profile and Team tabs sharing one draft. Separate practices
+and events in both entry points. Loading uses the authenticated repository;
+saving keeps the existing setup validation, stale-version and active-plan guards.
+Unsaved settings require an explicit discard before closing; tab switching keeps
+edits. No secondary profile data store or new authentication mechanism.
+
+Persist named, including empty, folders per account under forced RLS. Folder
+names are bounded text, never paths. Existing labels are backfilled. Creating a
+folder checks a per-account limit; rename/remove uses an expected revision and
+the existing account advisory lock. Rename updates all owned item labels and
+revisions atomically; removal unfiles items and never deletes roadmap content.
+Library cards expose Delete and Restore using the existing protected Trash flow.
+
+Boundaries: browser -> authenticated server action -> actor-scoped repository ->
+Postgres RLS. Spoofed folder IDs fail ownership; stale rename/delete fails revision;
+SQL is parameterized and rendered names are escaped. Competing item moves and
+folder writes serialize. Folder deletion has explicit confirmation explaining
+retained roadmaps. No new secrets, dependencies, network providers, AI requests,
+or logs containing submitted data. Folder records cascade with account deletion.
+Residual behavior: removing a folder is not recoverable as metadata, but its
+roadmaps remain intact and can be refiled. Trash remains recoverable history,
+not privacy erasure. Test foreign IDs, stale edits, empty-folder persistence,
+rename/remove propagation, and both settings entry points.

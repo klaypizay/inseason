@@ -19,7 +19,8 @@ import { saveSetup } from "../server/onboarding/actions";
 const steps = [
   "Coach & team",
   "Season",
-  "Practice & events",
+  "Practice schedule",
+  "Events schedule",
   "Players",
   "Assessment inputs",
 ];
@@ -47,15 +48,35 @@ function Field({
     </div>
   );
 }
-export function SetupForm({ initial }: { initial: SetupView }) {
+export function SetupForm({
+  initial,
+  mode = "full",
+  onDirtyChange,
+  onPendingChange,
+}: {
+  initial: SetupView;
+  mode?: "full" | "coach" | "team";
+  onDirtyChange?: (dirty: boolean) => void;
+  onPendingChange?: (pending: boolean) => void;
+}) {
   const date = useDateFormat();
   const [view, setView] = useState(initial);
   const [data, setData] = useState(initial.data);
   const [step, setStep] = useState(0);
+  const visibleStep = mode === "coach" ? 0 : step;
+  const labels = steps.map((label, i) =>
+    i === 0 && mode === "team" ? "Team" : label,
+  );
   const [dirty, setDirty] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [pending, startTransition] = useTransition();
+  useEffect(() => {
+    onDirtyChange?.(dirty);
+  }, [dirty, onDirtyChange]);
+  useEffect(() => {
+    onPendingChange?.(pending);
+  }, [pending, onPendingChange]);
   useEffect(() => {
     const guard = (e: BeforeUnloadEvent) => {
       if (dirty) {
@@ -109,12 +130,7 @@ export function SetupForm({ initial }: { initial: SetupView }) {
           {data.reports[field]
             ? "Coach report · not independently verified"
             : "Unknown · no assumption made"}
-          {source && !dirty
-            ? " · Saved " +
-              new Date(source.reportedAt).toLocaleDateString("en-US", {
-                timeZone: data.timezone,
-              })
-            : ""}
+          {source && !dirty ? " · Saved " + date(source.reportedAt) : ""}
         </p>
       </div>
     );
@@ -134,11 +150,13 @@ export function SetupForm({ initial }: { initial: SetupView }) {
           setData(result.view.data);
           setDirty(false);
           setMessage(
-            complete
-              ? "Saved. Setup complete. Your inputs are ready for assessment when planning becomes available."
-              : "Saved. You can safely leave and resume later.",
+            mode !== "full"
+              ? "Saved. Your coach and team settings are up to date."
+              : complete
+                ? "Saved. Setup complete. Your inputs are ready for assessment when planning becomes available."
+                : "Saved. You can safely leave and resume later.",
           );
-          if (next) setStep((s) => Math.min(4, s + 1));
+          if (next) setStep((s) => Math.min(steps.length - 1, s + 1));
         }
       } catch {
         setError(
@@ -172,8 +190,12 @@ export function SetupForm({ initial }: { initial: SetupView }) {
   );
   return (
     <div className="setup-layout">
-      <nav className="setup-steps" aria-label="Setup steps">
-        {steps.map((label, i) => (
+      <nav
+        hidden={mode === "coach"}
+        className="setup-steps"
+        aria-label="Setup steps"
+      >
+        {labels.map((label, i) => (
           <button
             type="button"
             className={i === step ? "" : "secondary"}
@@ -195,47 +217,59 @@ export function SetupForm({ initial }: { initial: SetupView }) {
         noValidate
       >
         <fieldset disabled={pending}>
-          <legend>{steps[step]}</legend>
-          {step === 0 && (
+          <legend>
+            {mode === "coach" ? "Coaching profile" : labels[step]}
+          </legend>
+          {visibleStep === 0 && (
             <>
-              <p>
-                Names are optional for players. Use synthetic aliases while this
-                is a development preview.
-              </p>
-              {input("teamName", "Team name")}
-              <div className="field-grid">
-                {report("experience", ["First year", "1–3 years", "4+ years"])}
-                {report("guidance", [
-                  "Step-by-step explanations",
-                  "Some guidance",
-                  "Brief reminders",
-                ])}
-                {report("teamType", ["School", "Recreation", "AAU", "Other"])}
-                {report("ageBand", [
-                  "8U",
-                  "9U",
-                  "10U",
-                  "11U",
-                  "12U",
-                  "13U",
-                  "14U",
-                  "15U",
-                  "16U",
-                  "17U",
-                  "18U",
-                ])}
-              </div>
-              {report("skill", [
-                "New to basketball",
-                "Developing fundamentals",
-                "Mixed experience",
-                "Experienced",
-              ])}
-              {report("goals")}
-              {report("philosophy")}
+              {mode !== "team" && (
+                <>
+                  {report("experience", [
+                    "First year",
+                    "1–3 years",
+                    "4+ years",
+                  ])}
+                  {report("guidance", [
+                    "Step-by-step explanations",
+                    "Some guidance",
+                    "Brief reminders",
+                  ])}
+                  {report("philosophy")}
+                </>
+              )}
+              {mode !== "coach" && (
+                <>
+                  <p>
+                    Names are optional for players. Use synthetic aliases while
+                    this is a development preview.
+                  </p>
+                  {input("teamName", "Team name")}
+                  {report("teamType", ["School", "Recreation", "AAU", "Other"])}
+                  {report("ageBand", [
+                    "8U",
+                    "9U",
+                    "10U",
+                    "11U",
+                    "12U",
+                    "13U",
+                    "14U",
+                    "15U",
+                    "16U",
+                    "17U",
+                    "18U",
+                  ])}
+                  {report("skill", [
+                    "New to basketball",
+                    "Developing fundamentals",
+                    "Mixed experience",
+                    "Experienced",
+                  ])}
+                  {report("goals")}
+                </>
+              )}
             </>
           )}
-          {step === 1 && (
+          {visibleStep === 1 && (
             <>
               {input("title", "Season title")}
               <div className="field-grid">
@@ -376,7 +410,7 @@ export function SetupForm({ initial }: { initial: SetupView }) {
               )}
             </>
           )}
-          {step === 2 && (
+          {visibleStep === 2 && (
             <>
               <div className="field-grid">
                 {number("playerCount", "Approximate player count", 50)}
@@ -518,6 +552,10 @@ export function SetupForm({ initial }: { initial: SetupView }) {
                   Add practice slot
                 </button>
               )}
+            </>
+          )}
+          {visibleStep === 3 && (
+            <>
               <h3>Games, tournaments & unavailable dates</h3>
               <p>
                 Opponent names are optional. Mark dates that should block team
@@ -658,7 +696,7 @@ export function SetupForm({ initial }: { initial: SetupView }) {
               )}
             </>
           )}
-          {step === 3 && (
+          {visibleStep === 4 && (
             <>
               <p>
                 A roster is optional. Your approximate count is enough for
@@ -762,7 +800,7 @@ export function SetupForm({ initial }: { initial: SetupView }) {
               )}
             </>
           )}
-          {step === 4 && (
+          {visibleStep === 5 && (
             <>
               <p>
                 Tell us what you have seen so far. These remain your reports; no
@@ -813,26 +851,31 @@ export function SetupForm({ initial }: { initial: SetupView }) {
           )}
           <div className="button-row">
             <button type="submit" disabled={pending}>
-              Save progress
+              {mode === "coach"
+                ? "Save coaching profile"
+                : mode === "team"
+                  ? "Save team settings"
+                  : "Save progress"}
             </button>
-            {step < 4 ? (
-              <button
-                type="button"
-                className="secondary"
-                disabled={pending}
-                onClick={() => save(data.complete, true)}
-              >
-                Save & continue
-              </button>
-            ) : (
-              <button
-                type="button"
-                disabled={pending}
-                onClick={() => save(true)}
-              >
-                Finish setup
-              </button>
-            )}
+            {mode !== "coach" &&
+              (step < steps.length - 1 ? (
+                <button
+                  type="button"
+                  className="secondary"
+                  disabled={pending}
+                  onClick={() => save(data.complete, true)}
+                >
+                  Save & continue
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  disabled={pending}
+                  onClick={() => save(true)}
+                >
+                  Finish setup
+                </button>
+              ))}
           </div>
         </div>
       </form>

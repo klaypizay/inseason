@@ -88,6 +88,10 @@ test("setup resumes, preserves Unknowns and rejects invalid duration before comp
     .getByLabel("Duration (minutes)", { exact: true })
     .nth(1)
     .fill("90");
+  await page
+    .getByRole("button", { name: "Save & continue", exact: true })
+    .click();
+  await expect(page.getByRole("status")).toContainText("Saved.", savedTimeout);
   if (!(await page.getByLabel("Event type", { exact: true }).count()))
     await page.getByRole("button", { name: "Add event", exact: true }).click();
   await page
@@ -122,7 +126,7 @@ test("setup resumes, preserves Unknowns and rejects invalid duration before comp
   );
   await page.reload();
   await expect(page.getByRole("status")).toContainText("Setup complete");
-  await page.getByRole("button", { name: "4. Players", exact: true }).click();
+  await page.getByRole("button", { name: "5. Players", exact: true }).click();
   await expect(page.getByLabel(/alias \(optional\)/)).toHaveCount(9);
   expect(
     await page.evaluate(

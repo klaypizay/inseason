@@ -50,3 +50,22 @@ export type LibraryItem = LibraryEdit & {
   planId: string | null;
   isCurrent: boolean;
 };
+
+export type LibraryFolder = { id: string; name: string; revision: number };
+export const folderMutationSchema = z.discriminatedUnion("action", [
+  z.strictObject({
+    action: z.literal("create"),
+    name: z.string().trim().min(1).max(60),
+  }),
+  z.strictObject({
+    action: z.literal("rename"),
+    id: z.uuid(),
+    revision: z.number().int().positive(),
+    name: z.string().trim().min(1).max(60),
+  }),
+  z.strictObject({
+    action: z.literal("delete"),
+    id: z.uuid(),
+    revision: z.number().int().positive(),
+  }),
+]);

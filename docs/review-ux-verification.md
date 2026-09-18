@@ -56,3 +56,26 @@ No paid AI calls are needed for this change.
   **0 errors, 2 warnings**. Both warnings are the existing placeholder credential
   URL patterns in `.env.example:4–5`, not real credentials or new feature findings.
   The manual review found no additional security issue in the changed surface.
+
+## Settings tabs and folder manager follow-up
+
+Rafter web-app review of the follow-up surface:
+
+- A01/A07: both new actions resolve the authenticated session
+  (`src/server/preferences/actions.ts:51,62`). Folder reads and writes explicitly
+  scope `account_id` and migration 009 forces account RLS. Foreign folder IDs are
+  rejected; no caller-supplied account identity is accepted.
+- A02/A05: no new credentials, cryptography, debug logging, transport or security
+  configuration. Native folder IDs use the database UUID generator.
+- A03: strict discriminated schemas bound folder labels and revisions; repository
+  SQL binds all values. Labels stay escaped React text and never become paths.
+- A04/A08: account advisory locks serialize item moves and folder changes;
+  revisions reject stale destructive metadata operations. Folder removal unfiles
+  owned items and increments their metadata revisions without deleting plans.
+  Empty folders persist and a 100-folder cap bounds new storage. Existing setup
+  saves retain their context-version guard in both UI entry points.
+- A06/A09/A10: no dependency, logging or outbound network surface added.
+
+Migration 009 backfills existing labels. Folder and settings tests use isolated
+synthetic accounts. Existing application secrets and real roadmap data are not
+used as browser test inputs. Final verification results follow below.

@@ -176,13 +176,18 @@ never reset it to bypass a budget. See [M4 design](docs/M4-design.md) and
 ## Review preferences and roadmap library
 
 Dates default to **MM/DD/YYYY**. Open **Settings** in the header to save a date
-format and coach display name, or follow **Edit coach & team profile** for the
-existing profile and season fields. Native calendar pickers follow the browser's
+format, coach display name, experience, guidance and philosophy in **Profile (Coach)**.
+The **Team** tab edits team details, season, players and assessment inputs directly
+in the popup. Practice schedule and Events schedule are separate steps here and
+on the existing setup page. Switching tabs preserves edits; closing warns before
+discarding unsaved changes. Native calendar pickers follow the browser's
 locale; all displayed calendar dates use the saved preference.
 
 Open **Season** to organize saved roadmaps and assessments. **Name & organize**
-renames an item, assigns a folder (type to create one), or moves it to Archive or
-Trash. Use the Show and Folder filters to find it later. Trash is recoverable:
+renames an item, assigns a folder, or moves it to Archive. **New folder** creates
+a persistent empty folder; **Manage folders** renames or removes folders. Removing
+a folder moves its roadmaps to Unfiled without deleting them. **Delete** on each
+card opens the confirmation to move it to Trash; trashed cards offer **Restore**. Use the Show and Folder filters to find it later. Trash is recoverable:
 choose Library in its details to restore it. It retains historical records and
 is not permanent privacy deletion. Accept a replacement before moving the active
 roadmap out of the library.
@@ -191,4 +196,4 @@ On a roadmap, review the phase and week cards before accepting. A week opens in
 a dialog with Previous/Next week navigation and a Phase priorities tab. Closing
 it or pressing Escape keeps edits and returns to the same place on the board.
 The sticky Save/Accept bar saves those edits; closing a dialog alone does not
-save them. Apply migration 008 before running this version.
+save them. Apply migrations 008 and 009 before running this version.

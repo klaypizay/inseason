@@ -647,3 +647,22 @@ textarea:disabled {
     top: 0;
   }
 }
+
+.overlay .setup-layout {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 18px;
+  margin-top: 24px;
+}
+.overlay .setup-steps {
+  position: static;
+  display: flex;
+  flex-wrap: wrap;
+}
+.setup-steps[hidden] {
+  display: none;
+}
+.overlay .setup-card {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}

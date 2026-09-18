@@ -2,7 +2,8 @@
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import type { LibraryItem } from "../domain/preferences";
+import { FolderManager } from "./folder-manager";
+import type { LibraryItem, LibraryFolder } from "../domain/preferences";
 import { saveLibraryItem } from "../server/preferences/actions";
 import { Overlay } from "./overlay";
 import { useDateFormat } from "./preferences-provider";
@@ -26,16 +27,32 @@ export function LibraryDetails({
         {item.folder || "Unfiled"} ·{" "}
         {item.isCurrent ? "Active roadmap" : item.state}
       </p>
-      <button
-        className="secondary"
-        onClick={() => {
-          setDraft(item);
-          setError("");
-          setOpen(true);
-        }}
-      >
-        Name & organize
-      </button>
+      <div className="button-row">
+        <button
+          className="secondary"
+          onClick={() => {
+            setDraft(item);
+            setError("");
+            setOpen(true);
+          }}
+        >
+          Name & organize
+        </button>
+        <button
+          className="secondary"
+          disabled={pending}
+          onClick={() => {
+            setDraft({
+              ...item,
+              state: item.state === "trash" ? "active" : "trash",
+            });
+            setError("");
+            setOpen(true);
+          }}
+        >
+          {item.state === "trash" ? "Restore" : "Delete"}
+        </button>
+      </div>
       <Overlay
         open={open}
         onClose={() => {
@@ -126,7 +143,9 @@ export function LibraryDetails({
             </p>
           )}
           {error && <p role="alert">{error}</p>}
-          <button disabled={pending}>
+          <button
+            disabled={pending || (item.isCurrent && draft.state !== "active")}
+          >
             {pending
               ? "Saving…"
               : draft.state === "trash"
@@ -138,12 +157,21 @@ export function LibraryDetails({
     </div>
   );
 }
-export function RoadmapLibrary({ items }: { items: LibraryItem[] }) {
+export function RoadmapLibrary({
+  items,
+  folders: savedFolders,
+}: {
+  items: LibraryItem[];
+  folders: LibraryFolder[];
+}) {
   const date = useDateFormat();
   const [state, setState] = useState("active"),
     [folder, setFolder] = useState("");
   const folders = [
-    ...new Set(items.map((x) => x.folder).filter(Boolean)),
+    ...new Set([
+      ...savedFolders.map((f) => f.name),
+      ...items.map((x) => x.folder).filter(Boolean),
+    ]),
   ].sort();
   const shown = items.filter(
     (x) => x.state === state && (!folder || x.folder === folder),
@@ -151,6 +179,11 @@ export function RoadmapLibrary({ items }: { items: LibraryItem[] }) {
   return (
     <section className="draft-history">
       <h2>Your roadmap library</h2>
+      <p>
+        Create folders to organize this library. Delete moves a roadmap to
+        recoverable Trash.
+      </p>
+      <FolderManager folders={savedFolders} onChanged={() => setFolder("")} />
       <div className="library-tools">
         <label>
           Show
@@ -178,7 +211,8 @@ export function RoadmapLibrary({ items }: { items: LibraryItem[] }) {
           >
             <LibraryDetails initial={item} folders={folders} />
             <p>
-              {item.status} · {date(item.created)}
+              {item.status === "succeeded" ? "Saved" : item.status} ·{" "}
+              {date(item.created)}
             </p>
             {item.state !== "trash" && (
               <Link

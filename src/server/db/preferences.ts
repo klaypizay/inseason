@@ -5,6 +5,8 @@ import {
   libraryEditSchema,
   type Preferences,
   type LibraryItem,
+  type LibraryFolder,
+  folderMutationSchema,
 } from "../../domain/preferences";
 import { NotFound } from "../../domain/errors";
 import { PlanRuleError } from "../../domain/roadmap";
@@ -63,6 +65,61 @@ export class LibraryRepository {
       [z.uuid().parse(season), this.actor],
     );
   }
+  async folders() {
+    return this.q<LibraryFolder>(
+      "select id,name,revision from coach.library_folders where account_id=$1 order by name",
+      [this.actor],
+    );
+  }
+  private async ensureFolder(name: string) {
+    if (!name) return;
+    const folders = await this.folders();
+    if (folders.some((f) => f.name === name)) return;
+    if (folders.length >= 100)
+      throw new PlanRuleError(
+        "You can have up to 100 folders. Remove an unused folder first.",
+      );
+    await this.q(
+      "insert into coach.library_folders(account_id,name) values($1,$2)",
+      [this.actor, name],
+    );
+  }
+  async manageFolder(input: unknown) {
+    const data = folderMutationSchema.parse(input);
+    await this.q("select pg_advisory_xact_lock(hashtext($1))", [this.actor]);
+    if (data.action === "create") {
+      await this.ensureFolder(data.name);
+      return this.folders();
+    }
+    const folders = await this.folders(),
+      old = folders.find((f) => f.id === data.id);
+    if (!old) throw new NotFound();
+    if (old.revision !== data.revision)
+      throw new PlanRuleError(
+        "This folder changed in another tab. Reload before saving.",
+      );
+    const name = data.action === "delete" ? "" : data.name;
+    if (name === old.name) return folders;
+    if (name && folders.some((f) => f.name === name))
+      throw new PlanRuleError(
+        "A folder with that name already exists. Choose another name.",
+      );
+    await this.q(
+      "update coach.generation_runs g set folder=$1,library_revision=library_revision+1,updated_at=now() from coach.programs p where g.program_id=p.id and p.owner_id=$2 and g.folder=$3",
+      [name, this.actor, old.name],
+    );
+    if (data.action === "delete")
+      await this.q(
+        "delete from coach.library_folders where id=$1 and account_id=$2",
+        [data.id, this.actor],
+      );
+    else
+      await this.q(
+        "update coach.library_folders set name=$1,revision=revision+1 where id=$2 and account_id=$3",
+        [name, data.id, this.actor],
+      );
+    return this.folders();
+  }
   async save(id: string, input: unknown) {
     const data = libraryEditSchema.parse(input);
     await this.q("select pg_advisory_xact_lock(hashtext($1))", [this.actor]);
@@ -75,6 +132,7 @@ export class LibraryRepository {
       throw new PlanRuleError(
         "Accept a replacement roadmap before archiving or deleting the active roadmap.",
       );
+    await this.ensureFolder(data.folder);
     await this.q(
       "update coach.generation_runs set display_name=$1,folder=$2,library_state=$3,library_revision=library_revision+1,updated_at=now() where id=$4",
       [data.name, data.folder, data.state, id],

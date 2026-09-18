@@ -47,12 +47,103 @@ test("coach saves date settings, names and folders, then trashes and restores a 
     await expect(
       page.getByText("Settings saved.", { exact: true }),
     ).toBeVisible({ timeout: 30000 });
+    const settings = page.getByRole("dialog", {
+      name: "Your settings",
+      exact: true,
+    });
+    await expect(
+      settings.getByRole("button", {
+        name: "3. Practice schedule",
+        exact: true,
+      }),
+    ).toHaveCount(0);
+    expect(await settings.evaluate((e) => e.scrollWidth <= e.clientWidth)).toBe(
+      true,
+    );
+    await settings.evaluate((e) => e.scrollTo(0, 0));
+    await page.screenshot({ path: info.outputPath("coach-settings.png") });
+    await settings
+      .getByRole("combobox", { name: "Coaching experience", exact: true })
+      .selectOption("First year");
+    await settings
+      .getByRole("textbox", { name: "Teaching philosophy", exact: true })
+      .fill("Let every player explore.");
+    await settings.getByRole("tab", { name: "Team", exact: true }).click();
+    expect(await settings.evaluate((e) => e.scrollWidth <= e.clientWidth)).toBe(
+      true,
+    );
+    await settings.evaluate((e) => e.scrollTo(0, 0));
+    await page.screenshot({ path: info.outputPath("team-settings.png") });
+    await expect(
+      settings.getByRole("combobox", {
+        name: "Coaching experience",
+        exact: true,
+      }),
+    ).toHaveCount(0);
+    await settings
+      .getByRole("textbox", { name: "Team name", exact: true })
+      .fill("Settings team");
+    await settings
+      .getByRole("button", { name: "3. Practice schedule", exact: true })
+      .click();
+    await expect(
+      settings.getByRole("button", { name: "Add event", exact: true }),
+    ).toHaveCount(0);
+    await settings
+      .getByRole("button", { name: "4. Events schedule", exact: true })
+      .click();
+    await expect(
+      settings.getByRole("button", { name: "Add practice slot", exact: true }),
+    ).toHaveCount(0);
+    await settings
+      .getByRole("tab", { name: "Profile (Coach)", exact: true })
+      .click();
+    await expect(
+      settings.getByRole("textbox", {
+        name: "Teaching philosophy",
+        exact: true,
+      }),
+    ).toHaveValue("Let every player explore.");
+    await settings
+      .getByRole("button", { name: "Close dialog", exact: true })
+      .click();
+    await settings
+      .getByRole("button", { name: "Keep editing", exact: true })
+      .click();
+    await settings
+      .getByRole("button", { name: "Save coaching profile", exact: true })
+      .click();
+    await expect(
+      settings.getByText(
+        "Saved. Your coach and team settings are up to date.",
+        { exact: true },
+      ),
+    ).toBeVisible({ timeout: 30000 });
     await page
       .getByRole("button", { name: "Close dialog", exact: true })
       .click();
     await page.reload();
     await expect(
       page.getByRole("heading", { name: "Welcome back, Coach Review." }),
+    ).toBeVisible();
+    await page.goto("/setup");
+    await expect(
+      page.getByRole("textbox", { name: "Team name", exact: true }),
+    ).toHaveValue("Settings team");
+    await expect(
+      page.getByRole("textbox", { name: "Teaching philosophy", exact: true }),
+    ).toHaveValue("Let every player explore.");
+    await page
+      .getByRole("button", { name: "3. Practice schedule", exact: true })
+      .click();
+    await expect(
+      page.getByRole("button", { name: "Add event", exact: true }),
+    ).toHaveCount(0);
+    await page
+      .getByRole("button", { name: "4. Events schedule", exact: true })
+      .click();
+    await expect(
+      page.getByRole("button", { name: "Add event", exact: true }),
     ).toBeVisible();
     await page.goto("/roadmaps/" + fixture.id);
     await expect(
@@ -74,18 +165,46 @@ test("coach saves date settings, names and folders, then trashes and restores a 
       page.getByRole("heading", { name: "Spring fundamentals", exact: true }),
     ).toBeVisible({ timeout: 30000 });
     await page.goto("/season");
+    await page.getByRole("button", { name: "New folder", exact: true }).click();
+    await page
+      .getByRole("textbox", { name: "Folder name", exact: true })
+      .fill("Empty folder");
+    await page
+      .getByRole("button", { name: "Create folder", exact: true })
+      .click();
+    await expect(
+      page.getByRole("dialog", { name: "New folder", exact: true }),
+    ).not.toBeVisible({ timeout: 30000 });
+    await page.reload();
     await page
       .getByRole("combobox", { name: "Folder", exact: true })
-      .selectOption("Youth teams");
+      .selectOption("Empty folder");
+    await expect(
+      page.getByText("No items here yet.", { exact: true }),
+    ).toBeVisible();
+    await page
+      .getByRole("button", { name: "Manage folders", exact: true })
+      .click();
+    await page
+      .getByRole("combobox", { name: "Choose folder", exact: true })
+      .selectOption({ label: "Youth teams" });
+    await page
+      .getByRole("textbox", { name: "Folder name", exact: true })
+      .fill("Youth program");
+    await page
+      .getByRole("button", { name: "Rename folder", exact: true })
+      .click();
+    await expect(
+      page.getByRole("dialog", { name: "Manage folders", exact: true }),
+    ).not.toBeVisible({ timeout: 30000 });
+
+    await page
+      .getByRole("combobox", { name: "Folder", exact: true })
+      .selectOption("Youth program");
     await expect(
       page.getByRole("heading", { name: "Spring fundamentals", exact: true }),
     ).toBeVisible();
-    await page
-      .getByRole("button", { name: "Name & organize", exact: true })
-      .click();
-    await page
-      .getByRole("combobox", { name: "Location", exact: true })
-      .selectOption("trash");
+    await page.getByRole("button", { name: "Delete", exact: true }).click();
     await page
       .getByRole("button", { name: "Move to Trash", exact: true })
       .click();
@@ -98,12 +217,7 @@ test("coach saves date settings, names and folders, then trashes and restores a 
     await expect(
       page.getByRole("heading", { name: "Spring fundamentals", exact: true }),
     ).toBeVisible();
-    await page
-      .getByRole("button", { name: "Name & organize", exact: true })
-      .click();
-    await page
-      .getByRole("combobox", { name: "Location", exact: true })
-      .selectOption("active");
+    await page.getByRole("button", { name: "Restore", exact: true }).click();
     await page
       .getByRole("button", { name: "Save details", exact: true })
       .click();
@@ -116,6 +230,25 @@ test("coach saves date settings, names and folders, then trashes and restores a 
     await expect(
       page.getByRole("heading", { name: "Spring fundamentals", exact: true }),
     ).toBeVisible();
+    await page
+      .getByRole("button", { name: "Manage folders", exact: true })
+      .click();
+    await page
+      .getByRole("combobox", { name: "Choose folder", exact: true })
+      .selectOption({ label: "Youth program" });
+    await page
+      .getByRole("button", { name: "Remove folder", exact: true })
+      .click();
+    await page
+      .getByRole("button", { name: "Confirm remove folder", exact: true })
+      .click();
+    await expect(
+      page.getByRole("dialog", { name: "Manage folders", exact: true }),
+    ).not.toBeVisible({ timeout: 30000 });
+    await expect(
+      page.getByRole("heading", { name: "Spring fundamentals", exact: true }),
+    ).toBeVisible();
+    await expect(page.getByText(/Unfiled/)).toBeVisible();
     await page.screenshot({ path: info.outputPath("organized-library.png") });
   } finally {
     if (fixture) await fixture.cleanup();
