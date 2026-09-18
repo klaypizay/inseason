@@ -1,3 +1,4 @@
+import { PlanningRepository } from "./planning";
 import { OnboardingRepository } from "./onboarding";
 import { createHash } from "node:crypto";
 import { z } from "zod";
@@ -53,6 +54,9 @@ class Repository {
     private actor: string,
     private fresh: boolean,
   ) {}
+  planning() {
+    return new PlanningRepository(this.q, this.actor);
+  }
   onboarding() {
     return new OnboardingRepository(this.q, this.actor, this.fresh);
   }

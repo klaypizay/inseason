@@ -1,0 +1,84 @@
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { database } from "../../server/db/runtime";
+import { withSession } from "../../server/db/repository";
+import { sessionToken } from "../../server/auth/session";
+import { Unauthorized } from "../../domain/errors";
+import { GenerateButtons } from "../../components/generate-buttons";
+export const dynamic = "force-dynamic";
+export const maxDuration = 240;
+export default async function SeasonPage() {
+  let result;
+  try {
+    result = await withSession(database, await sessionToken(), async (r) => {
+      const setup = await r.onboarding().load();
+      const { teamId, seasonId } = setup.data;
+      return {
+        setup,
+        runs:
+          teamId && seasonId ? await r.planning().list(teamId, seasonId) : [],
+      };
+    });
+  } catch (e) {
+    if (e instanceof Unauthorized) redirect("/login");
+    throw e;
+  }
+  const { data } = result.setup;
+  return (
+    <main id="main">
+      <div className="toolbar">
+        <Link href="/today">← Today</Link>
+        <Link href="/setup">Team settings</Link>
+      </div>
+      <p className="eyebrow">YOUR SEASON</p>
+      <h1>From team context to a teaching plan.</h1>
+      <section className="card">
+        <h2>{data.title}</h2>
+        <p>
+          Generate an assessment or a coarse roadmap. Every result is a draft;
+          nothing changes your active plan.
+        </p>
+        {(process.env.COACH_AI_PROVIDER ?? "fixture") === "fixture" && (
+          <p className="small">
+            Demo mode · deterministic examples, not a live AI assessment.
+          </p>
+        )}
+        {!data.complete && (
+          <p>
+            Finish <Link href="/setup">team setup</Link> first. You can keep
+            editing your inputs at any time.
+          </p>
+        )}
+        {data.teamId && data.seasonId && (
+          <GenerateButtons
+            teamId={data.teamId}
+            seasonId={data.seasonId}
+            disabled={!data.complete}
+          />
+        )}
+      </section>
+      <section className="card draft-history">
+        <h2>Saved drafts & attempts</h2>
+        {!result.runs.length ? (
+          <p>
+            No drafts yet. Your saved team inputs are ready whenever you are.
+          </p>
+        ) : (
+          <ul>
+            {result.runs.map((r) => (
+              <li key={r.id}>
+                <Link href={"/drafts/" + r.id}>
+                  {r.action === "assessSeason"
+                    ? "Assessment"
+                    : "Season roadmap"}
+                </Link>{" "}
+                · {r.status === "succeeded" ? "Draft saved" : r.status} ·{" "}
+                {r.created.slice(0, 10)}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+    </main>
+  );
+}

@@ -21,7 +21,8 @@ export default async function Today() {
       <div className="toolbar">
         <nav aria-label="Main">
           <span aria-current="page">Today</span>{" "}
-          <Link href="/setup">Team settings</Link>
+          <Link href="/setup">Team settings</Link>{" "}
+          <Link href="/season">Season</Link>
         </nav>
         <form action={signOut}>
           <button className="secondary">Sign out</button>
@@ -71,7 +72,7 @@ export default async function Today() {
             </li>
           </ol>
           <p className="small">
-            Setup preview · Save your team inputs now. Planning tools come next.
+            Assessment preview · Draft your assessment and season roadmap.
           </p>
         </aside>
       </div>

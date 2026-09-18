@@ -1,6 +1,6 @@
-# Season Coach · Milestone 1
+# Season Coach · Milestone 2
 
-Foundation for an adult basketball coach's private workspace. Includes managed sign-in, immediate app-session revocation, a responsive Today shell, private PostgreSQL schema and tenant-scoped repository, synthetic fixtures, CI and a deterministic AI interface. M1 adds resumable team/coach setup, season phases, practice availability, events, optional roster aliases and attributed assessment inputs. Live AI and generated planning come in later milestones.
+Foundation for an adult basketball coach's private workspace. Includes managed sign-in, immediate app-session revocation, a responsive Today shell, private PostgreSQL schema and tenant-scoped repository, synthetic fixtures, CI and a deterministic AI interface. M1 adds resumable team/coach setup, season phases, practice availability, events, optional roster aliases and attributed assessment inputs. M2 adds live OpenAI assessment and coarse season roadmap drafts with evidence checks, saved history and bounded retries.
 
 Original specifications remain unchanged in [`md files/`](md%20files/). See [M0 design](docs/M0-design.md) for security decisions and [verification](docs/M0-verification.md) for actual results and outstanding gates.
 
@@ -70,10 +70,10 @@ For the two-coach manual check: sign in separately as both seeded coaches; each 
 - Managed Supabase authentication verifies credentials. Its temporary login session is revoked immediately, then an independent HttpOnly application session is issued for at most seven days, with 24-hour idle expiry. Sign-out deletes the app session server-side. A password reset/provider account freeze currently also requires an operator to delete that coach's `coach.sessions` rows; automated provider lifecycle integration is a pre-pilot requirement.
 - Login quotas are shared through PostgreSQL (10 attempts/email and 100 total/15 minutes). Configure trusted-edge per-IP limits and provider abuse controls before public use. Expired session and old login-limit rows should be purged daily by an operator job; do not log row contents.
 - Runtime credentials are intentionally least-privileged: M1 grants bounded setup writes under owner policies, immutable report inserts and synthetic-only program deletion. The runtime cannot label a program synthetic. Setup saves are limited to 60 per account per ten minutes. Session and login-limit storage is server-only infrastructure, not tenant content accessible through the browser.
-- AI fixture actions return typed Unknown drafts with no evidence or active-plan mutations. Action-specific generated plan schemas belong to M2–M7; these placeholders do not claim to be useful plans.
+- AI fixture actions return typed Unknown drafts with no evidence or active-plan mutations. M2 implements assessment and roadmap schemas; later action placeholders remain unavailable to users.
 - No real youth data until the original privacy/vendor/retention/coaching and security launch gates are resolved. M1 verifies synthetic live-data cascades; production privacy deletion and operational backups remain future launch gates.
 
-Next milestone: **M1 — coach/team onboarding and assessment inputs**.
+Next milestone: **M3 — Roadmap review and calendar UI**.
 
 ## Syncing with GitHub
 
@@ -92,3 +92,22 @@ git push
 `commit` saves a local version; `push` uploads committed changes to GitHub. Saving a file alone does not sync it. To download changes from GitHub when your working tree is clean, use `git pull --ff-only`.
 
 `.env.local`, installed dependencies, build output and test artifacts are ignored. `.env.example` contains placeholders and is tracked. Check `git status` before committing; never force-add secrets. GitHub Actions runs the foundation checks on each push.
+
+## Assessment and season drafts (M2)
+
+Open **Season** from Today after completing setup. Draft an assessment or season roadmap; open saved attempts from history. Every draft has a private URL and survives refresh. Reports remain attributed coach statements; generated inferences are Likely with same-topic evidence, and missing information remains Unknown. All configured phases and inclusive weeks appear in the roadmap. No draft activates a plan or schedules practices. Edit team inputs and generate again; prior drafts remain history and display a stale-settings notice.
+
+In `.env.local`, set `COACH_AI_PROVIDER=openai`, `OPENAI_API_KEY` and optionally `OPENAI_MODEL` (default `gpt-5.4-mini-2026-03-17`). Restart the server after changing provider configuration. `COACH_AI_PROVIDER=fixture` provides free deterministic examples and is the tracked default. Keys remain server-side. OpenAI receives bounded team reports, calendar/resources and aggregate participation, without account identity, team name or player aliases; avoid personal details in free-text reports. Requests use `store:false`, which does not replace provider retention/privacy approval before real youth data.
+
+Each run permits at most three provider calls: one transient retry and one schema repair, with a sixty-second deadline per call and 12,000 maximum output tokens. Unsupported evidence/calendar responses are rejected without automatic retry. Two simultaneous runs per program and a rolling daily limit of thirty apply (`COACH_AI_DAILY_LIMIT`, 1–100). Interrupted runs expire after five minutes. Refresh checks an existing run rather than starting another. Token totals reflect usage returned by the provider; failed connections/refusals may have unreported billable usage, so provider billing is authoritative.
+
+Migrations 004 and 005 add private draft storage and run metadata. Apply them with `npm run db:migrate` before using these screens. See [M2 design](docs/M2-design.md) and [M2 verification](docs/M2-verification.md).
+
+Live-provider tests are deliberately opt-in and use only a fixed synthetic fixture:
+
+```powershell
+$env:RUN_LIVE_AI_TESTS = '1'
+node --env-file=.env.local node_modules/vitest/vitest.mjs run tests/live-ai.test.ts
+```
+
+The ignored `.env.m2-test-budget` reserves $0.10 per attempted call, at most nine calls across reruns for this authorized test budget. Do not reset it to bypass authorization. Synthetic outputs and measured usage are saved under ignored `.local-artifacts/live-ai/`. Browser generation tests require fixture mode and skip in live mode to avoid accidental charges.

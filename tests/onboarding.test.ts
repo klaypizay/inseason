@@ -56,7 +56,12 @@ const fixture = (): Setup => ({
 });
 beforeAll(async () => {
   pg = new PGlite();
-  for (const f of ["001_foundation", "003_onboarding"])
+  for (const f of [
+    "001_foundation",
+    "003_onboarding",
+    "004_generation_drafts",
+    "005_draft_season_integrity",
+  ])
     await pg.exec(await readFile("migrations/" + f + ".sql", "utf8"));
   for (let i = 0; i < 2; i++) {
     await pg.query("insert into coach.accounts(id) values($1)", [actors[i]]);

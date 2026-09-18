@@ -394,3 +394,18 @@ textarea {
     gap: 10px;
   }
 }
+
+.draft-section,
+.draft-history {
+  margin-top: 24px;
+}
+.source-row {
+  padding: 16px 0;
+  border-bottom: 1px solid var(--line);
+  overflow-wrap: anywhere;
+}
+@media (max-width: 760px) {
+  .toolbar nav {
+    flex-wrap: wrap;
+  }
+}

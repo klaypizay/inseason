@@ -25,6 +25,10 @@ beforeAll(async () => {
     await readFile("migrations/002_protect_migration_ledger.sql", "utf8"),
   );
   await pg.exec(await readFile("migrations/003_onboarding.sql", "utf8"));
+  await pg.exec(await readFile("migrations/004_generation_drafts.sql", "utf8"));
+  await pg.exec(
+    await readFile("migrations/005_draft_season_integrity.sql", "utf8"),
+  );
   const q = async (sql: string, values?: unknown[]) =>
     (await pg.query(sql, values)).rows;
   await seedFixtures(q);
