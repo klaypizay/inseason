@@ -79,3 +79,24 @@ Rafter web-app review of the follow-up surface:
 Migration 009 backfills existing labels. Folder and settings tests use isolated
 synthetic accounts. Existing application secrets and real roadmap data are not
 used as browser test inputs. Final verification results follow below.
+
+Follow-up verification:
+
+- Migration 009 applied successfully; existing folder labels preserved.
+- 48 local tests passed, with 7 credentialed/live checks skipped in the ordinary
+  suite. New tests exercise empty-folder persistence, duplicate creation,
+  cross-account rejection, stale revisions, duplicate rename rejection,
+  item revision propagation and lossless folder removal.
+- Typecheck, lint, formatting and production build passed.
+- Desktop and mobile browser flows passed after the final layout update:
+  Coach/Team tabs retain unsaved edits, closing warns before discard, saving is
+  visible on the original setup page, practice/events are separate in both entry
+  points, empty folders survive reload, rename updates item placement, explicit
+  Delete/Restore works, and removing a folder leaves its roadmap visible.
+- Coach/Team dialogs and library screenshots inspected; no horizontal dialog
+  overflow on either tested viewport. Restarted app checked with agent-browser.
+- Source-only secrets scan returned no findings. No paid AI calls were made.
+- Source commit 554073c passed GitHub CI run 35400256905.
+- Rafter standard scan `b1c8a78c-abdf-4013-a852-cc1c00cc9fca` completed with
+  **0 errors and 2 existing warnings**, both placeholder database URLs in
+  `.env.example:4–5`. No new security findings were reported.
