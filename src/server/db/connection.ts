@@ -1,5 +1,6 @@
 import "server-only";
 import postgres from "postgres";
+import { readFileSync } from "node:fs";
 let connection: ReturnType<typeof postgres> | undefined;
 export function db() {
   if (!connection) {
@@ -12,7 +13,14 @@ export function db() {
       throw new Error("TLS required");
     connection = postgres(url, {
       ssl:
-        local && process.env.DATABASE_SSL === "false" ? false : "verify-full",
+        local && process.env.DATABASE_SSL === "false"
+          ? false
+          : process.env.DATABASE_CA_CERT_FILE
+            ? {
+                ca: readFileSync(process.env.DATABASE_CA_CERT_FILE, "utf8"),
+                rejectUnauthorized: true,
+              }
+            : "verify-full",
       max: 5,
       prepare: false,
       connect_timeout: 10,

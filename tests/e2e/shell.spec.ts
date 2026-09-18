@@ -1,4 +1,32 @@
 import { test, expect } from "@playwright/test";
+test("two managed coaches see only their own seeded team", async ({ page }) => {
+  test.skip(
+    !process.env.E2E_COACH_A_EMAIL || !process.env.E2E_COACH_B_EMAIL,
+    "Requires two provisioned synthetic coaches",
+  );
+  for (const [suffix, own, other] of [
+    ["A", "Demo Cedar", "Demo Willow"],
+    ["B", "Demo Willow", "Demo Cedar"],
+  ]) {
+    await page.goto("/login");
+    await page
+      .getByLabel("Email", { exact: true })
+      .fill(process.env[`E2E_COACH_${suffix}_EMAIL`]!);
+    await page
+      .getByLabel("Password", { exact: true })
+      .fill(process.env[`E2E_COACH_${suffix}_PASSWORD`]!);
+    await page.getByRole("checkbox").check();
+    await page.getByRole("button", { name: "Sign in" }).click();
+    await expect(
+      page.getByRole("heading", { name: own, exact: true }),
+    ).toBeVisible({ timeout: 20000 });
+    await expect(
+      page.getByRole("heading", { name: other, exact: true }),
+    ).toHaveCount(0);
+    await page.getByRole("button", { name: "Sign out" }).click();
+    await expect(page).toHaveURL(/\/login$/);
+  }
+});
 test("unauthenticated coaches reach an accessible, responsive sign-in page", async ({
   page,
 }) => {

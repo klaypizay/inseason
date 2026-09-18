@@ -16,7 +16,14 @@ let pg: PGlite;
 let database: Database;
 beforeAll(async () => {
   pg = new PGlite();
+  // Model the hosted provider's default grants on the runner-created ledger.
+  await pg.exec(`create role anon; create role authenticated;
+    create table public.coach_migrations(name text primary key,checksum text not null);
+    grant all on public.coach_migrations to anon,authenticated;`);
   await pg.exec(await readFile("migrations/001_foundation.sql", "utf8"));
+  await pg.exec(
+    await readFile("migrations/002_protect_migration_ledger.sql", "utf8"),
+  );
   const q = async (sql: string, values?: unknown[]) =>
     (await pg.query(sql, values)).rows;
   await seedFixtures(q);
@@ -41,6 +48,24 @@ beforeAll(async () => {
 });
 afterAll(async () => pg.close());
 describe("fresh migration and two-coach isolation", () => {
+  it("denies API-role access to migration history despite provider default grants", async () => {
+    for (const role of ["anon", "authenticated"]) {
+      await expect(
+        pg.transaction(async (tx) => {
+          await tx.exec(`set local role ${role}`);
+          await tx.query("select * from public.coach_migrations");
+        }),
+      ).rejects.toThrow();
+      await expect(
+        pg.transaction(async (tx) => {
+          await tx.exec(`set local role ${role}`);
+          await tx.query(
+            "insert into public.coach_migrations values ('forged','forged')",
+          );
+        }),
+      ).rejects.toThrow();
+    }
+  });
   it("allows each coach to see only their team and roster", async () => {
     expect(await withSession(database, tokenA, (r) => r.teams())).toEqual([
       { id: a.team, name: "Demo Cedar" },

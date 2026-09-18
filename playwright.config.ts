@@ -22,7 +22,8 @@ export default defineConfig({
   webServer: {
     command: "npm run dev -- --port 3187",
     url: "http://localhost:3187/login",
-    reuseExistingServer: false,
+    // Explicit opt-in only for a server started from this checkout.
+    reuseExistingServer: process.env.PLAYWRIGHT_REUSE_SERVER === "1",
     timeout: 120000,
   },
 });
