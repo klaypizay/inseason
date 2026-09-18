@@ -1,3 +1,4 @@
+import { RoadmapRepository } from "./roadmap";
 import { PlanningRepository } from "./planning";
 import { OnboardingRepository } from "./onboarding";
 import { createHash } from "node:crypto";
@@ -54,6 +55,9 @@ class Repository {
     private actor: string,
     private fresh: boolean,
   ) {}
+  roadmap() {
+    return new RoadmapRepository(this.q, this.actor);
+  }
   planning() {
     return new PlanningRepository(this.q, this.actor);
   }

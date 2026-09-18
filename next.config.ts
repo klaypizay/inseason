@@ -1,6 +1,6 @@
 import type { NextConfig } from "next";
 const config: NextConfig = {
-  experimental: { serverActions: { bodySizeLimit: "64kb" } },
+  experimental: { serverActions: { bodySizeLimit: "768kb" } },
   async headers() {
     return [
       {

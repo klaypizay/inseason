@@ -15,6 +15,7 @@ export default async function SeasonPage() {
       const { teamId, seasonId } = setup.data;
       return {
         setup,
+        roadmap: seasonId ? await r.roadmap().summary(seasonId) : null,
         runs:
           teamId && seasonId ? await r.planning().list(teamId, seasonId) : [],
       };
@@ -32,7 +33,30 @@ export default async function SeasonPage() {
       </div>
       <p className="eyebrow">YOUR SEASON</p>
       <h1>From team context to a teaching plan.</h1>
-      <section className="card">
+      {result.roadmap?.currentId && (
+        <section className="card">
+          <h2>Your accepted roadmap</h2>
+          <p>
+            See what comes next, review checkpoints, and preview calendar
+            changes.
+          </p>
+          <Link
+            className="button-link"
+            href={"/roadmaps/" + result.roadmap.currentId}
+          >
+            Open accepted roadmap
+          </Link>
+        </section>
+      )}
+      {result.roadmap?.reviewId &&
+        result.roadmap.reviewId !== result.roadmap.currentId && (
+          <p>
+            <Link href={"/roadmaps/" + result.roadmap.reviewId}>
+              Continue saved roadmap review
+            </Link>
+          </p>
+        )}
+      <section className="card draft-section">
         <h2>{data.title}</h2>
         <p>
           Generate an assessment or a coarse roadmap. Every result is a draft;

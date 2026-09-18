@@ -143,10 +143,29 @@ export class OnboardingRepository {
     const s = await this.owned(teamId, seasonId, true);
     if (data.teamId && s.context_version !== data.version)
       throw new SetupConflict();
-    if (s.status !== "setup")
+    if (s.status === "archived")
       throw new SetupRuleError(
-        "This season has moved beyond setup. Calendar changes need plan review.",
+        "Reopen this season before editing its settings.",
       );
+    if (s.status === "active") {
+      const previous = (await this.get(teamId, seasonId)).data;
+      const calendar = (v: typeof data) => ({
+        start: v.start,
+        end: v.end,
+        timezone: v.timezone,
+        weekStart: v.weekStart,
+        phases: v.phases,
+        availability: v.availability,
+        events: v.events,
+      });
+      if (
+        !data.complete ||
+        JSON.stringify(calendar(data)) !== JSON.stringify(calendar(previous))
+      )
+        throw new SetupRuleError(
+          "Use the accepted roadmap's calendar preview to change dates, phases, availability or events. Other team inputs can still be saved here.",
+        );
+    }
     const programId = s.program_id;
     for (const [table, rows] of [
       ["phases", data.phases],

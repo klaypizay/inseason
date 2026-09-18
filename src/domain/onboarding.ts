@@ -42,7 +42,7 @@ const phase = z.strictObject({
   start: date,
   end: date,
 });
-const availability = z.strictObject({
+export const availabilitySchema = z.strictObject({
   id: optionalId,
   weekday: z.number().int().min(0).max(6),
   time,
@@ -93,7 +93,7 @@ export const setupSchema = z
     hoops: z.number().int().min(0).max(20).nullable(),
     court: z.enum(["unknown", "full", "half", "shared", "none"]),
     phases: z.array(phase).max(12),
-    availability: z.array(availability).max(14),
+    availability: z.array(availabilitySchema).max(14),
     events: z.array(event).max(30),
     players: z.array(player).max(30),
   })

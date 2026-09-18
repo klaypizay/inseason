@@ -1,4 +1,5 @@
 "use client";
+import { ReviewRoadmapButton } from "./review-roadmap-button";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { draftStatus, executeDraft } from "../server/planning/actions";
@@ -262,9 +263,12 @@ export function DraftView({ initial }: { initial: GenerationView }) {
           <section className="card draft-section">
             <h2>Keep the coach in control</h2>
             <p>
-              Assessment inputs remain editable. Draft acceptance and roadmap
-              editing arrive in the next milestone.
+              Review the roadmap, edit its teaching priorities, and accept it
+              when you are ready.
             </p>
+            {payload.action === "draftRoadmap" && (
+              <ReviewRoadmapButton generationId={view.id} />
+            )}
             <Link href="/setup">Edit team inputs</Link> ·{" "}
             <Link href="/season">Generate another draft</Link>
           </section>

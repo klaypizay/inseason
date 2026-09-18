@@ -1,6 +1,6 @@
-# Season Coach · Milestone 2
+# Season Coach · Milestone 3
 
-Foundation for an adult basketball coach's private workspace. Includes managed sign-in, immediate app-session revocation, a responsive Today shell, private PostgreSQL schema and tenant-scoped repository, synthetic fixtures, CI and a deterministic AI interface. M1 adds resumable team/coach setup, season phases, practice availability, events, optional roster aliases and attributed assessment inputs. M2 adds live OpenAI assessment and coarse season roadmap drafts with evidence checks, saved history and bounded retries.
+Foundation for an adult basketball coach's private workspace. Includes managed sign-in, immediate app-session revocation, a responsive Today shell, private PostgreSQL schema and tenant-scoped repository, synthetic fixtures, CI and a deterministic AI interface. M1 adds resumable team/coach setup, season phases, practice availability, events, optional roster aliases and attributed assessment inputs. M2 adds live OpenAI assessment and coarse season roadmap drafts with evidence checks, saved history and bounded retries. M3 adds manual roadmap review, acceptance, locks, calendar previews and immutable version history.
 
 Original specifications remain unchanged in [`md files/`](md%20files/). See [M0 design](docs/M0-design.md) for security decisions and [verification](docs/M0-verification.md) for actual results and outstanding gates.
 
@@ -73,7 +73,7 @@ For the two-coach manual check: sign in separately as both seeded coaches; each 
 - AI fixture actions return typed Unknown drafts with no evidence or active-plan mutations. M2 implements assessment and roadmap schemas; later action placeholders remain unavailable to users.
 - No real youth data until the original privacy/vendor/retention/coaching and security launch gates are resolved. M1 verifies synthetic live-data cascades; production privacy deletion and operational backups remain future launch gates.
 
-Next milestone: **M3 — Roadmap review and calendar UI**.
+Next milestone: **M4 — Weekly planner**.
 
 ## Syncing with GitHub
 
@@ -111,3 +111,21 @@ node --env-file=.env.local node_modules/vitest/vitest.mjs run tests/live-ai.test
 ```
 
 The ignored `.env.m2-test-budget` reserves $0.10 per attempted call, at most nine calls across reruns for this authorized test budget. Do not reset it to bypass authorization. Synthetic outputs and measured usage are saved under ignored `.local-artifacts/live-ai/`. Browser generation tests require fixture mode and skip in live mode to avoid accidental charges.
+
+## Roadmap review and calendar (M3)
+
+From a saved roadmap draft, choose **Review & edit roadmap**. Edit the explanation, assumptions, phase goals, observable checks, weekly emphases and checkpoints. **Save draft edits** preserves a review without changing the active plan. **Accept roadmap** atomically activates the reviewed content and calendar. Season links to the accepted version and any unfinished review. No AI connection is needed for editing or acceptance.
+
+Choose a phase or teaching week to navigate its goals and sessions. A week with no sessions explicitly shows no team practice. Locks protect goal text/checks or a week's teaching content. Save and accept an unlock before changing protected active content. Started/past teaching weeks and past/completed/canceled sessions remain fixed. Completion and detailed practice activities are later milestones; M3's sessions are scheduled calendar slots.
+
+**Review calendar changes** offers shift-future-dates and keep-existing-dates choices. Review phase boundaries, teaching-week dates, session moves and fixed events, then **Save calendar preview**. This creates a draft; acceptance is a separate step. Games/tournaments stay fixed unless individually edited. Blocking events cannot be overridden: reschedule or cancel conflicting sessions, or explicitly edit the event. An outside-availability session needs a coach override reason. Cancellation retains history. Effective availability ranges can be adjusted in the preview; new slots are not automatically added when extending an already accepted calendar (session allocation/overrides continue in M4).
+
+Shortening does not silently drop teaching content. Reassign dates or explicitly remove affected unlocked future weeks, then resolve affected sessions. New uncovered dates receive clearly labeled weeks for coach planning. All phase/week coverage and conflicts are validated again on acceptance. IDs and content versions remain stable during date-only moves.
+
+**Version history** links to the most recent 100 versions; older saved URLs remain readable. **Recover version … as a new draft** retains the current calendar, fixed events, locks and historical sessions while bringing earlier teaching content back for review. Restored out-of-range weeks produce conflicts rather than disappearing. A pre-acceptance draft with an obsolete phase layout cannot replace an accepted layout. Recovery always adds history; it never deletes intervening versions. Concurrent or stale saves fail without overwriting newer work.
+
+Once a roadmap is active, Team settings still accepts profile/roster/resource edits; calendar changes must use roadmap review. A settings change makes prior reviews stale. Recover the current accepted version against the new context or generate a fresh roadmap before accepting again.
+
+Apply migration 006 with `npm run db:migrate`. The new history tables are immutable to the runtime role, and calendar projections use forced ownership policies and tenant/season foreign keys. See [M3 design](docs/M3-design.md) and [M3 verification](docs/M3-verification.md).
+
+M3 hosted/browser tests provision isolated synthetic fixtures; the browser test creates and deletes a temporary confirmed adult test-coach login through `SUPABASE_SECRET_KEY`, without sending email. It uses fixture generation directly and makes no paid AI calls. Ordinary CI skips credentialed tests. Traces stay disabled. Existing M1 browser tests still mutate Demo Cedar; avoid running those against a season you are actively reviewing.
