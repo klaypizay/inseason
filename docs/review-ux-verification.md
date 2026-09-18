@@ -123,3 +123,26 @@ Rafter secure-design preceded the new move action. Web-app review:
 49 local tests passed, including bulk rollback for foreign/stale items and targets,
 unique-selection enforcement, multi-item/unfiled moves, and active-plan preservation.
 Additional final browser/build/security evidence follows below.
+
+Bulk-move verification notes:
+
+- The standard desktop viewport verifies actual stepped native drag gestures for
+  a multi-selection and a single unselected card. Folder targets stay visible in
+  a bounded sticky area while browsing desktop cards. Touch/keyboard movement uses
+  checkboxes and Move selected; changing filters clears selection.
+- Mobile bulk moves passed, including multi-item moves, Unfiled, single-item moves,
+  persistence after reload, folder counts and selection clearing. No horizontal
+  overflow. Desktop and mobile screenshots inspected.
+- Existing settings/folder-management tests were updated to target named folder
+  labels and the item's Unfiled metadata, avoiding ambiguous matches to folder
+  cards. No production user records were modified by these tests.
+- Typecheck, lint and formatting passed. Source-only secret scan had no findings.
+- Review evidence: strict schema `src/domain/preferences.ts:77`; authenticated
+  action `src/server/preferences/actions.ts:74`; locked, all-before-write owner
+  and revision checks `src/server/db/preferences.ts:127`.
+- Final validation: all four desktop/mobile library and settings flows passed;
+  production build passed; restarted app verified with agent-browser, no errors.
+- Source commit 5588179 passed GitHub CI run 35401988896.
+- Rafter standard scan `a1dd211f-942c-4644-bb4a-6cb30893f295` completed with
+  **0 errors, 2 existing warnings**: placeholder database URLs in
+  `.env.example:4–5`. No new findings in the bulk-move surface.
