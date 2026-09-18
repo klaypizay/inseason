@@ -34,31 +34,37 @@ objectives stay protected. Generation failure leaves manual editing available.
   Added a further calendar regression proving an availability override cannot
   bypass a blocking event (11 weekly domain/database tests passed). Combined
   local/hosted coverage is 49 passing checks plus the separate live-provider check.
-  Final build and remote scan results are recorded below when complete.
+  Final production build, lint, type checking and formatting passed. GitHub
+  validation `35395628594` passed on source revision `820ac8f`. Standard Rafter scan
+  `1f36731a-67c8-4aca-bf0b-ba7e2b5a4d72` completed with zero errors and two
+  existing warnings at `.env.example:4-5`. Both concern placeholder connection
+  strings, not real credentials. Source-only local secrets scanning found no
+  secrets. The configured OpenAI development server was restored and browser
+  health checks reported no errors.
 
 ## Manual Rafter / React review
 
-`src/server/db/week.ts` checks session-derived ownership before reads/writes and
+`src/server/db/week.ts:36` checks session-derived ownership before reads/writes and
 serializes changes on the existing actor advisory lock plus season row lock.
 All values use bound SQL parameters; no dynamic user-supplied identifiers exist.
-`migrations/007_weekly_planner.sql` forces RLS, denies public/provider API roles,
+`migrations/007_weekly_planner.sql:53` forces RLS, denies public/provider API roles,
 enforces tenant/season/version links, and grants no snapshot updates. Program
 privacy deletion cascades through weekly snapshots and generation context.
 
-`src/domain/week.ts` rejects foreign goals, invented session IDs, duplicate IDs,
+`src/domain/week.ts:130` rejects foreign goals, invented session IDs, duplicate IDs,
 unknown fields and changed protected teaching/assignments. Calendar generation is
 absent from the provider contract. Only explicit coach acceptance advances the
 active weekly head. Repeated requests return the saved result; optimistic version
 checks reject competing edits. A generated draft never changes the active head.
 
-`src/server/ai/week-provider.ts` separates fixed rules from untrusted coach context,
-uses no tools and accepts only bounded structured output. `openai-season.ts` shares
+`src/server/ai/week-provider.ts:23` separates fixed rules from untrusted coach context,
+uses no tools and accepts only bounded structured output. `src/server/ai/openai-season.ts:67` shares
 the existing fixed HTTPS endpoint, redirect rejection, timeout/response cap and
 `store:false` across season/week actions. Schema and semantic validation run before
 persistence. No new dependencies, auth flows, keys, uploads, external URLs, caches,
 vector stores, agent tools or public sharing were introduced.
 
-`src/components/week-editor.tsx` renders escaped text and native labeled controls,
+`src/components/week-editor.tsx:108` renders escaped text and native labeled controls,
 shows draft/accepted/stale/failure states, preserves saved drafts across refresh,
 and blocks local edits while generation completes. `next.config.ts` disables
 Next's development logging of Server Function arguments. Errors expose no SQL,
