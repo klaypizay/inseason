@@ -17,11 +17,13 @@ export function Overlay({
     const dialog = ref.current;
     if (!open || !dialog) return;
     const overflow = document.body.style.overflow;
+    const position = { left: window.scrollX, top: window.scrollY };
     dialog.showModal();
     document.body.style.overflow = "hidden";
     return () => {
       dialog.close();
       document.body.style.overflow = overflow;
+      window.scrollTo({ ...position, behavior: "instant" });
     };
   }, [open]);
   return (

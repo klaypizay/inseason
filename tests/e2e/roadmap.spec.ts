@@ -63,8 +63,8 @@ test("coach edits, accepts, locks, shifts and recovers a roadmap without AI call
     await page
       .getByRole("button", { name: "Review week 1", exact: true })
       .scrollIntoViewIfNeeded();
-    const boardScroll = await page.evaluate(() => scrollY);
     await openWeek();
+    const boardScroll = await page.evaluate(() => scrollY);
     await page
       .getByRole("textbox", { name: "Weekly emphasis", exact: true })
       .fill("Find open passing lanes together.");
