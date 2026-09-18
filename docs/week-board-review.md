@@ -21,5 +21,9 @@ explicit selected state, focus transfer to the editor, and responsive wrapping.
 
 Verification: TypeScript, ESLint and desktop/mobile roadmap browser flow, including
 card selection, focus transfer and preservation of unsaved edits. Browser artifacts
-are under ignored test-results. Remote standard Rafter scan is required on the
-published source revision before completion.
+are under ignored test-results. GitHub checks passed for source revision `4d8f417`, including the production
+build. Standard Rafter scan `670553cd-35c7-4468-977f-41d376563afe` completed
+with zero errors and two existing warnings about placeholder connection strings
+in `.env.example:4-5`; these contain example values, not live credentials. The
+source-only local secrets scan returned no findings. Both desktop and mobile
+roadmap browser flows passed.
