@@ -29,7 +29,7 @@ test("assessment and roadmap drafts survive refresh without activating a plan", 
     "This scenario requires the free fixture provider",
   );
   await page
-    .getByRole("button", { name: "Draft assessment", exact: true })
+    .getByRole("button", { name: "Assess team needs", exact: true })
     .click();
   await expect(page).toHaveURL(/drafts\//, { timeout: 20000 });
   await expect(
@@ -46,7 +46,7 @@ test("assessment and roadmap drafts survive refresh without activating a plan", 
   ).toBeVisible();
   await page.getByRole("link", { name: "Season drafts" }).click();
   await page
-    .getByRole("button", { name: "Draft season roadmap", exact: true })
+    .getByRole("button", { name: "Create roadmap draft", exact: true })
     .click();
   await expect(
     page.getByRole("heading", { name: "Why this roadmap?" }),

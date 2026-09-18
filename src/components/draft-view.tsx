@@ -128,8 +128,9 @@ export function DraftView({ initial }: { initial: GenerationView }) {
             </p>
           )}
           <p>
-            Suggested teaching content only. No plan has been accepted and no
-            practices have been scheduled.
+            {payload.action === "assessSeason"
+              ? "This assessment is advice about your team’s needs. It does not activate a roadmap or schedule practices. Return to Season to create a roadmap when you are ready."
+              : "This is the original generated suggestion. Review and edit its weeks before accepting a version as your active roadmap. Opening this draft does not change the plan you currently use."}
           </p>
           {payload.action === "assessSeason"
             ? (() => {

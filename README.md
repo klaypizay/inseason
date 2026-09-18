@@ -197,3 +197,19 @@ a dialog with Previous/Next week navigation and a Phase priorities tab. Closing
 it or pressing Escape keeps edits and returns to the same place on the board.
 The sticky Save/Accept bar saves those edits; closing a dialog alone does not
 save them. Apply migrations 008 and 009 before running this version.
+
+## Folder cards, bulk moves, and planning terminology
+
+The library begins with visible All items, Unfiled and named folder cards. Select
+individual items or **Select all shown**, choose **Move to folder**, then **Move
+selected**. On desktop, drag a card (or its Drag handle) onto a folder; dragging a
+selected card moves the entire selection. Touch and keyboard users use the same
+bulk move controls. Changing a filter clears selection. Moves are all-or-nothing
+and do not accept a roadmap, change its status, or alter teaching content.
+
+**How planning works** explains the process on Season: team setup, optional
+assessment, roadmap draft, review/accept, and weekly planning. An assessment is
+advice, not a prerequisite or active plan. Acceptance chooses the roadmap used
+for weekly planning. Demo/synthetic data and example output are separate labels,
+not lifecycle stages. Library badges distinguish drafts, the roadmap in use,
+draft changes awaiting review and retained history.

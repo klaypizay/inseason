@@ -73,7 +73,8 @@ export default async function Today() {
             </li>
           </ol>
           <p className="small">
-            Assessment preview · Draft your assessment and season roadmap.
+            Start in Season: understand team needs, review a roadmap, then
+            choose the plan you want to use.
           </p>
         </aside>
       </div>

@@ -41,14 +41,14 @@ export function GenerateButtons({
           disabled={disabled || pending}
           onClick={() => start("assessSeason")}
         >
-          Draft assessment
+          Assess team needs
         </button>
         <button
           className="secondary"
           disabled={disabled || pending}
           onClick={() => start("draftRoadmap")}
         >
-          Draft season roadmap
+          Create roadmap draft
         </button>
       </div>
       {pending && <p role="status">Preparing your draft…</p>}

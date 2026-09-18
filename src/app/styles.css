@@ -666,3 +666,95 @@ textarea:disabled {
   border: 0;
   background: transparent;
 }
+
+.folder-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
+  gap: 12px;
+  margin: 20px 0;
+}
+.folder-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  color: var(--ink);
+  background: white;
+  border: 1px solid var(--line);
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+.folder-card.selected {
+  background: var(--accent);
+  border-color: var(--ink);
+}
+.folder-card.drop-ready {
+  outline: 2px dashed #668947;
+  outline-offset: 2px;
+}
+.folder-card.drop-ready:hover {
+  background: var(--accent);
+}
+.library-selection {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  padding: 16px;
+  margin-top: 16px;
+  background: #eaf0e4;
+  border-radius: 12px;
+}
+.library-selection label {
+  margin: 0;
+}
+.library-card-tools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.library-item.selected {
+  outline: 2px solid var(--ink);
+}
+.drag-handle {
+  cursor: grab;
+  padding: 8px;
+  color: #51665e;
+  font-size: 14px;
+}
+.item-kind {
+  font-size: 13px;
+  font-weight: 700;
+}
+.planning-guide {
+  margin: 24px 0;
+}
+.planning-guide li {
+  margin-bottom: 12px;
+}
+@media (max-width: 600px) {
+  .folder-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .library-selection {
+    align-items: stretch;
+  }
+  .library-selection label {
+    max-width: 100%;
+  }
+}
+
+@media (min-width: 601px) {
+  .folder-grid {
+    position: sticky;
+    top: 8px;
+    z-index: 3;
+    background: var(--paper);
+    max-height: 30vh;
+    overflow: auto;
+    padding: 8px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+  }
+}

@@ -81,7 +81,7 @@ export function RoadmapEditor({ initial }: { initial: RoadmapView }) {
     <>
       <p className="eyebrow">
         {active
-          ? "ACCEPTED ROADMAP"
+          ? "ACTIVE ROADMAP"
           : v.status === "accepted"
             ? "ACCEPTED HISTORY"
             : "ROADMAP REVIEW"}{" "}
@@ -105,7 +105,7 @@ export function RoadmapEditor({ initial }: { initial: RoadmapView }) {
             ? "Unsaved changes — save before leaving this page."
             : active
               ? "This accepted version is saved and active."
-              : "Saved version. Reviewing it does not change the active plan."}
+              : "Saved version. Review each week, then accept to use this roadmap for weekly planning."}
       </p>
       {error && (
         <p role="alert" className="error">

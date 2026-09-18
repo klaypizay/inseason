@@ -49,6 +49,10 @@ export type LibraryItem = LibraryEdit & {
   created: string;
   planId: string | null;
   isCurrent: boolean;
+  wasAccepted: boolean;
+  latestPlanStatus: string | null;
+  isDemo: boolean;
+  isExample: boolean;
 };
 
 export type LibraryFolder = { id: string; name: string; revision: number };
@@ -69,3 +73,33 @@ export const folderMutationSchema = z.discriminatedUnion("action", [
     revision: z.number().int().positive(),
   }),
 ]);
+
+export const moveLibrarySchema = z.strictObject({
+  items: z
+    .array(
+      z.strictObject({ id: z.uuid(), revision: z.number().int().positive() }),
+    )
+    .min(1)
+    .max(200)
+    .refine(
+      (items) => new Set(items.map((x) => x.id)).size === items.length,
+      "Select each item only once.",
+    ),
+  folder: z
+    .strictObject({ id: z.uuid(), revision: z.number().int().positive() })
+    .nullable(),
+});
+export type LibrarySelection = z.infer<typeof moveLibrarySchema>["items"];
+export function libraryStatus(item: LibraryItem) {
+  if (item.status === "queued" || item.status === "running")
+    return "Preparing draft";
+  if (item.status === "failed") return "Draft unavailable";
+  if (item.action === "assessSeason") return "Assessment · advice";
+  if (item.isCurrent)
+    return item.latestPlanStatus === "draft"
+      ? "Roadmap · draft changes"
+      : "Roadmap · in use";
+  if (item.latestPlanStatus === "draft") return "Roadmap · draft";
+  if (item.wasAccepted) return "Roadmap · saved history";
+  return "Roadmap · draft";
+}

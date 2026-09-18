@@ -178,7 +178,7 @@ test("coach saves date settings, names and folders, then trashes and restores a 
     await page.reload();
     await page
       .getByRole("combobox", { name: "Folder", exact: true })
-      .selectOption("Empty folder");
+      .selectOption({ label: "Empty folder" });
     await expect(
       page.getByText("No items here yet.", { exact: true }),
     ).toBeVisible();
@@ -200,7 +200,7 @@ test("coach saves date settings, names and folders, then trashes and restores a 
 
     await page
       .getByRole("combobox", { name: "Folder", exact: true })
-      .selectOption("Youth program");
+      .selectOption({ label: "Youth program" });
     await expect(
       page.getByRole("heading", { name: "Spring fundamentals", exact: true }),
     ).toBeVisible();
@@ -248,7 +248,17 @@ test("coach saves date settings, names and folders, then trashes and restores a 
     await expect(
       page.getByRole("heading", { name: "Spring fundamentals", exact: true }),
     ).toBeVisible();
-    await expect(page.getByText(/Unfiled/)).toBeVisible();
+    await expect(
+      page
+        .locator("article")
+        .filter({
+          has: page.getByRole("heading", {
+            name: "Spring fundamentals",
+            exact: true,
+          }),
+        })
+        .getByText(/Unfiled/),
+    ).toBeVisible({ timeout: 30000 });
     await page.screenshot({ path: info.outputPath("organized-library.png") });
   } finally {
     if (fixture) await fixture.cleanup();

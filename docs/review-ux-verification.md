@@ -100,3 +100,26 @@ Follow-up verification:
 - Rafter standard scan `b1c8a78c-abdf-4013-a852-cc1c00cc9fca` completed with
   **0 errors and 2 existing warnings**, both placeholder database URLs in
   `.env.example:4–5`. No new security findings were reported.
+
+## Bulk folder movement and planning orientation
+
+Rafter secure-design preceded the new move action. Web-app review:
+
+- Access/authentication: moveLibraryItems resolves the opaque session; move uses
+  actor-owned item and destination queries under existing forced RLS.
+- Injection/validation: strict schemas accept 1–200 unique UUID/revision pairs
+  and a folder UUID/revision or null. All SQL values are bound. Browser drag text
+  is ignored; only locally selected records enter the same authenticated action.
+- Integrity: the account advisory lock serializes folder changes and moves.
+  Every item and destination is checked before any write; one transaction updates
+  folder labels and metadata revisions. Foreign/stale input cannot partially move
+  a batch. Active-plan pointers and teaching content are unchanged.
+- Configuration, authentication primitives, cryptography, dependencies, outbound
+  fetches, and logs: no new surface. Existing limits/errors/session controls apply.
+- Orientation text does not rename user content. Demo data is marked from the
+  existing program flag; fixture output is separately marked as example output.
+  Latest draft changes are not presented as an accepted active version.
+
+49 local tests passed, including bulk rollback for foreign/stale items and targets,
+unique-selection enforcement, multi-item/unfiled moves, and active-plan preservation.
+Additional final browser/build/security evidence follows below.

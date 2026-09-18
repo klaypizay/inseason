@@ -7,6 +7,7 @@ import {
   type LibraryItem,
   type LibraryFolder,
   folderMutationSchema,
+  moveLibrarySchema,
 } from "../../domain/preferences";
 import { NotFound } from "../../domain/errors";
 import { PlanRuleError } from "../../domain/roadmap";
@@ -45,6 +46,9 @@ export class LibraryRepository {
   ) {}
   private query = `select g.id,g.action,g.status,g.created_at::text as created,
     coalesce(nullif(g.display_name,''),s.title || case when g.action='draftRoadmap' then ' roadmap' else ' assessment' end) as name,
+    p.synthetic as "isDemo",g.provider='fixture' as "isExample",
+    (select v.status from coach.plan_versions v where v.generation_id=g.id order by v.number desc limit 1) as "latestPlanStatus",
+    exists(select 1 from coach.plan_versions v where v.generation_id=g.id and v.status='accepted') as "wasAccepted",
     g.folder,g.library_state as state,g.library_revision as revision,
     (select v.id from coach.plan_versions v where v.generation_id=g.id order by v.number desc limit 1) as "planId",
     exists(select 1 from coach.plan_versions v where v.id=s.current_plan_id and v.generation_id=g.id) as "isCurrent"
@@ -119,6 +123,42 @@ export class LibraryRepository {
         [name, data.id, this.actor],
       );
     return this.folders();
+  }
+  async move(input: unknown) {
+    const data = moveLibrarySchema.parse(input);
+    await this.q("select pg_advisory_xact_lock(hashtext($1))", [this.actor]);
+    let target = "";
+    if (data.folder) {
+      const folder = (await this.folders()).find(
+        (f) => f.id === data.folder!.id,
+      );
+      if (!folder) throw new NotFound();
+      if (folder.revision !== data.folder.revision)
+        throw new PlanRuleError(
+          "The destination folder changed. Reload before moving items.",
+        );
+      target = folder.name;
+    }
+    const ids = data.items.map((i) => i.id);
+    const rows = await this.q<LibraryItem>(
+      this.query +
+        " where g.id=any($1::uuid[]) and p.owner_id=$2 and g.prompt_version='m2-v1'",
+      [ids, this.actor],
+    );
+    if (rows.length !== ids.length) throw new NotFound();
+    if (
+      data.items.some(
+        (i) => rows.find((r) => r.id === i.id)!.revision !== i.revision,
+      )
+    )
+      throw new PlanRuleError(
+        "A selected item changed. Reload and select the items again; nothing was moved.",
+      );
+    await this.q(
+      "update coach.generation_runs set folder=$1,library_revision=library_revision+1,updated_at=now() where id=any($2::uuid[])",
+      [target, ids],
+    );
+    return { count: ids.length, folder: target };
   }
   async save(id: string, input: unknown) {
     const data = libraryEditSchema.parse(input);

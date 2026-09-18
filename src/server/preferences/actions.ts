@@ -70,3 +70,15 @@ export async function manageFolder(input: unknown) {
     return { error: message(e) };
   }
 }
+
+export async function moveLibraryItems(input: unknown) {
+  try {
+    return {
+      moved: await withSession(database, await sessionToken(), (r) =>
+        r.library().move(input),
+      ),
+    };
+  } catch (e) {
+    return { error: message(e) };
+  }
+}

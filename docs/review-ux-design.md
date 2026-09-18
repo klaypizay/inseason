@@ -59,3 +59,28 @@ Residual behavior: removing a folder is not recoverable as metadata, but its
 roadmaps remain intact and can be refiled. Trash remains recoverable history,
 not privacy erasure. Test foreign IDs, stale edits, empty-folder persistence,
 rename/remove propagation, and both settings entry points.
+
+## Bulk organization and planning orientation
+
+Place visible folder cards above library items. Checkboxes support multiple
+selection; a Move to folder control provides keyboard/touch access. Native desktop
+drag uses the same action for one card or the selected cards. Drag payload text is
+never parsed or trusted: only the component's current local selection can move.
+Clear selection when filters change so hidden items cannot move accidentally.
+
+Bulk movement accepts at most 200 unique item UUIDs with their observed revisions
+and an owned target folder UUID/revision (or Unfiled). Authenticate with the existing
+session, acquire the existing account lock, validate every owner and revision before
+any update, then move all in one transaction. A stale or foreign item or renamed/
+deleted target rejects the whole batch. Only folder labels and metadata revisions
+change; status, acceptance, teaching content and current-plan pointers do not.
+No new dependencies, schema, paid calls or outbound services. SQL is parameterized
+and displayed names stay escaped. Test rollback, foreign targets/items, stale items,
+stale targets, active-roadmap moves and desktop drag plus keyboard/touch movement.
+
+Explain setup -> optional assessment -> roadmap draft -> review/accept -> weekly
+planning. Assessment is advice, not an active plan or required prerequisite.
+Acceptance means the coach chooses the plan for weekly planning, not AI validation.
+Demo/synthetic is a data label, not a plan stage. Do not rename user-authored titles
+or imply that sample data is real. Use separate artifact type, use status and demo
+badges; a retained old accepted version is history, not the current active plan.

@@ -766,3 +766,96 @@ it("manages empty folders with ownership, revisions, and lossless item moves", a
       .id,
   ).toBe(a.roadmap);
 });
+
+it("moves a selection atomically and rejects stale or foreign items and folders", async () => {
+  const a = await fixture(),
+    b = await fixture();
+  const av = await withSession(db, a.token, (r) => r.roadmap().get(a.roadmap));
+  const bv = await withSession(db, b.token, (r) => r.roadmap().get(b.roadmap));
+  const get = (id: string) =>
+    withSession(db, a.token, (r) => r.library().item(id));
+  const first = await get(av.version.generationId!);
+  const run = await generateSeason(
+    db,
+    a.token,
+    {
+      teamId: a.setup.teamId!,
+      seasonId: a.setup.seasonId!,
+      action: "draftRoadmap",
+      idempotencyKey: randomUUID(),
+    },
+    fixtureSeasonProvider,
+  );
+  const second = await get(run.id);
+  const [target] = await withSession(db, a.token, (r) =>
+    r.library().manageFolder({ action: "create", name: "Squad plans" }),
+  );
+  const [foreign] = await withSession(db, b.token, (r) =>
+    r.library().manageFolder({ action: "create", name: "Private" }),
+  );
+  const pick = (x: { id: string; revision: number }) => ({
+    id: x.id,
+    revision: x.revision,
+  });
+  const selected = [pick(first), pick(second)];
+  await expect(
+    withSession(db, a.token, (r) =>
+      r.library().move({ items: selected, folder: pick(foreign) }),
+    ),
+  ).rejects.toThrow();
+  await expect(
+    withSession(db, a.token, (r) =>
+      r.library().move({
+        items: [pick(first), { id: bv.version.generationId!, revision: 1 }],
+        folder: pick(target),
+      }),
+    ),
+  ).rejects.toThrow();
+  expect((await get(first.id)).folder).toBe("");
+  await expect(
+    withSession(db, a.token, (r) =>
+      r.library().move({
+        items: [pick(first), { id: second.id, revision: 99 }],
+        folder: pick(target),
+      }),
+    ),
+  ).rejects.toThrow(/nothing was moved/);
+  expect((await get(first.id)).revision).toBe(first.revision);
+  await expect(
+    withSession(db, a.token, (r) =>
+      r.library().move({ items: [pick(first), pick(first)], folder: null }),
+    ),
+  ).rejects.toThrow();
+  await withSession(db, a.token, (r) =>
+    r.library().move({ items: selected, folder: pick(target) }),
+  );
+  expect((await get(first.id)).folder).toBe("Squad plans");
+  expect((await get(second.id)).folder).toBe("Squad plans");
+  expect(
+    (
+      await withSession(db, a.token, (r) =>
+        r.roadmap().summary(a.setup.seasonId!),
+      )
+    ).currentId,
+  ).toBe(a.roadmap);
+  const [renamed] = await withSession(db, a.token, (r) =>
+    r.library().manageFolder({
+      action: "rename",
+      id: target.id,
+      revision: target.revision,
+      name: "Renamed",
+    }),
+  );
+  const fresh = [pick(await get(first.id)), pick(await get(second.id))];
+  await expect(
+    withSession(db, a.token, (r) =>
+      r.library().move({ items: fresh, folder: pick(target) }),
+    ),
+  ).rejects.toThrow(/destination folder changed/);
+  await withSession(db, a.token, (r) =>
+    r.library().move({ items: fresh, folder: null }),
+  );
+  expect((await get(first.id)).folder).toBe("");
+  expect((await get(second.id)).folder).toBe("");
+  expect(renamed.revision).toBeGreaterThan(target.revision);
+});
