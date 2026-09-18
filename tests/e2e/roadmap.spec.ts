@@ -44,6 +44,11 @@ test("coach edits, accepts, locks, shifts and recovers a roadmap without AI call
     await page.goto("/drafts/" + fixture.generationId, {
       waitUntil: "domcontentloaded",
     });
+    await expect(page.locator(".week-grid .week-card")).toHaveCount(12);
+    await page.screenshot({
+      path: info.outputPath("draft-week-board.png"),
+      fullPage: true,
+    });
     await page
       .getByRole("button", { name: "Review & edit roadmap", exact: true })
       .click();
@@ -54,6 +59,26 @@ test("coach edits, accepts, locks, shifts and recovers a roadmap without AI call
     await page
       .getByRole("textbox", { name: "Weekly emphasis", exact: true })
       .fill("Find open passing lanes together.");
+    await page
+      .getByRole("button", { name: "Review week 2", exact: true })
+      .click();
+    await expect(page.locator("#week-editor")).toBeFocused();
+    await expect(
+      page.getByRole("button", { name: "Review week 2", exact: true }),
+    ).toHaveAttribute("aria-pressed", "true");
+    await page
+      .getByRole("button", { name: "Review week 1", exact: true })
+      .click();
+    await expect(
+      page.getByRole("textbox", { name: "Weekly emphasis", exact: true }),
+    ).toHaveValue("Find open passing lanes together.");
+    await expect(
+      page.getByRole("button", { name: "Review week 1", exact: true }),
+    ).toContainText("Find open passing lanes together.");
+    await page.screenshot({
+      path: info.outputPath("editor-week-board.png"),
+      fullPage: true,
+    });
     await change("Save draft edits");
     await expect(page.getByRole("status")).toHaveText(/Saved version/, {
       timeout: 30000,

@@ -133,6 +133,71 @@ export function RoadmapEditor({ initial }: { initial: RoadmapView }) {
           </p>
         </section>
       )}
+      <section className="week-board" aria-labelledby="week-board-title">
+        <h2 id="week-board-title" className="board-title">
+          Your season at a glance
+        </h2>
+        <p className="small">
+          Select a week to review or edit it. Cards reflect your unsaved
+          teaching edits.
+        </p>
+        {p.phases.map((group) => (
+          <section className="week-phase" key={group.id}>
+            <h3 className="eyebrow">
+              {group.type.replaceAll("_", " ")} · {group.start} to {group.end}
+            </h3>
+            <div className="week-grid">
+              {p.weeks
+                .filter((w) => w.phaseId === group.id)
+                .map((w) => {
+                  const draft = edits.weeks.find((x) => x.id === w.id)!;
+                  const count = p.sessions.filter(
+                    (s) => s.weekId === w.id && s.status === "scheduled",
+                  ).length;
+                  return (
+                    <button
+                      type="button"
+                      className="week-card week-select"
+                      key={w.id}
+                      aria-label={`Review week ${p.weeks.indexOf(w) + 1}`}
+                      aria-pressed={selected === w.id}
+                      aria-controls="week-editor"
+                      onClick={() => {
+                        setSelected(w.id);
+                        document.getElementById("week-editor")?.focus();
+                      }}
+                    >
+                      <span className="week-card-heading">
+                        Week {p.weeks.indexOf(w) + 1}
+                      </span>
+                      <span className="small">
+                        {w.start} → {w.end}
+                      </span>
+                      <span className="week-badges">
+                        <span>{count} scheduled</span>
+                        {draft.locked && <span>Locked</span>}
+                        {w.start <= today && w.end >= today && (
+                          <span>This week</span>
+                        )}
+                        {w.end < today && <span>Past</span>}
+                      </span>
+                      <span className="week-emphasis">{draft.emphasis}</span>
+                      <span className="week-checkpoint">
+                        <strong>Checkpoint</strong>
+                        {draft.checkpoint}
+                      </span>
+                      <span className="week-open">
+                        {selected === w.id
+                          ? "Selected · review below"
+                          : "Review week →"}
+                      </span>
+                    </button>
+                  );
+                })}
+            </div>
+          </section>
+        ))}
+      </section>
       <section className="card draft-section">
         <h2>What comes next</h2>
         <p>
@@ -183,7 +248,9 @@ export function RoadmapEditor({ initial }: { initial: RoadmapView }) {
         </p>
       </section>
       <section className="card draft-section">
-        <h2>Explore phases & weeks</h2>
+        <h2 id="week-editor" tabIndex={-1}>
+          Explore phases & weeks
+        </h2>
         <nav className="button-row" aria-label="Phases">
           {p.phases.map((x) => (
             <button

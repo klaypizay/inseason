@@ -422,3 +422,146 @@ input:disabled,
 textarea:disabled {
   opacity: 0.7;
 }
+
+.board-title {
+  margin-top: 36px;
+}
+.week-phase {
+  margin: 28px 0;
+  padding-top: 18px;
+  border-top: 2px solid #a4b4aa;
+}
+.week-phase > .eyebrow {
+  margin: 0 0 10px;
+}
+.week-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+.week-card {
+  min-width: 0;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-top: 4px solid #a4b4aa;
+  border-radius: 12px;
+  background: white;
+  overflow-wrap: anywhere;
+}
+.week-card h3,
+.week-card-heading {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+}
+.week-card > .small {
+  display: block;
+  margin: 4px 0 14px;
+  font-size: 12px;
+}
+.week-emphasis {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+  font-size: 16px;
+  line-height: 1.5;
+  font-weight: 600;
+  margin: 14px 0;
+  min-height: 72px;
+}
+.week-checkpoint {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.5;
+  margin: 0;
+  min-height: 78px;
+}
+.week-checkpoint strong {
+  display: block;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.week-details {
+  margin-top: 16px;
+  border-top: 1px solid var(--line);
+  font-size: 14px;
+}
+.week-details summary,
+.phase-notes summary {
+  font-size: 13px;
+  padding: 12px 0;
+}
+.phase-notes {
+  margin-bottom: 14px;
+}
+.week-select {
+  display: block;
+  width: 100%;
+  color: var(--ink);
+  text-align: left;
+  font-family: inherit;
+}
+.week-select:hover {
+  border-color: #51665e;
+  background: #f8faf4;
+}
+.week-select[aria-pressed="true"] {
+  border-color: var(--ink);
+  background: #eaf0e1;
+  box-shadow: 0 0 0 1px var(--ink);
+}
+.week-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 25px;
+}
+.week-badges > span {
+  font-size: 11px;
+  padding: 2px 8px;
+  background: #f0f2ea;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+}
+.week-open {
+  display: block;
+  font-size: 12px;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.roadmap-explanation {
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+#week-editor {
+  scroll-margin-top: 24px;
+}
+@media (max-width: 1000px) {
+  .week-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 600px) {
+  .week-grid {
+    grid-template-columns: 1fr;
+  }
+}
+@media print {
+  .week-card {
+    break-inside: avoid;
+  }
+  .week-emphasis,
+  .week-checkpoint {
+    display: block;
+    overflow: visible;
+  }
+}

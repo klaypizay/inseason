@@ -204,8 +204,8 @@ export function DraftView({ initial }: { initial: GenerationView }) {
                 const r = payload.content as Roadmap;
                 return (
                   <>
-                    <section className="card">
-                      <h2>Why this roadmap?</h2>
+                    <details className="card roadmap-explanation">
+                      <summary>Why this roadmap?</summary>
                       <p>{r.rationale}</p>
                       <h3>Assumptions</h3>
                       <ul>
@@ -217,43 +217,66 @@ export function DraftView({ initial }: { initial: GenerationView }) {
                         Dates are inclusive in {payload.context.season.timezone}
                         . Short boundary weeks stay within their phase.
                       </p>
-                    </section>
+                    </details>
+                    <h2 className="board-title">Your season at a glance</h2>
+                    <p className="small">
+                      Read weeks left to right, grouped by phase. Expand a card
+                      for its full teaching notes and sources.
+                    </p>
                     {payload.context.phases.map((p) => {
                       const phase = r.phases.find((x) => x.phaseId === p.id)!;
                       return (
-                        <section className="card draft-section" key={p.id}>
+                        <section className="week-phase" key={p.id}>
                           <p className="eyebrow">
                             {p.type.replace("_", "-")} · {p.start} to {p.end}
                           </p>
-                          <h2>Phase priorities</h2>
-                          <p>{phase.rationale}</p>
-                          {phase.goals.map((g, i) => (
-                            <div className="source-row" key={i}>
-                              <h3>{g.description}</h3>
-                              <p>{g.successCriteria}</p>
-                              {evidence(g.evidenceIds)}
-                            </div>
-                          ))}
-                          {payload.context.weeks
-                            .filter((w) => w.phaseId === p.id)
-                            .map((w) => {
-                              const week = r.weeks.find(
-                                (x) => x.sequence === w.sequence,
-                              )!;
-                              return (
-                                <div className="row-card" key={w.sequence}>
-                                  <h3>
-                                    Week {w.sequence} · {w.start} to {w.end}
-                                  </h3>
-                                  <p>{week.emphasis}</p>
-                                  <p>
-                                    <strong>Checkpoint:</strong>{" "}
-                                    {week.checkpoint}
-                                  </p>
-                                  {evidence(week.evidenceIds)}
-                                </div>
-                              );
-                            })}
+                          <details className="phase-notes">
+                            <summary>Phase priorities & rationale</summary>
+                            <p>{phase.rationale}</p>
+                            {phase.goals.map((g, i) => (
+                              <div className="source-row" key={i}>
+                                <h3>{g.description}</h3>
+                                <p>{g.successCriteria}</p>
+                                {evidence(g.evidenceIds)}
+                              </div>
+                            ))}
+                          </details>
+                          <div className="week-grid">
+                            {payload.context.weeks
+                              .filter((w) => w.phaseId === p.id)
+                              .map((w) => {
+                                const week = r.weeks.find(
+                                  (x) => x.sequence === w.sequence,
+                                )!;
+                                return (
+                                  <article
+                                    className="week-card"
+                                    key={w.sequence}
+                                  >
+                                    <h3>Week {w.sequence}</h3>
+                                    <p className="small">
+                                      {w.start} → {w.end}
+                                    </p>
+                                    <p className="week-emphasis">
+                                      {week.emphasis}
+                                    </p>
+                                    <p className="week-checkpoint">
+                                      <strong>Checkpoint</strong>
+                                      {week.checkpoint}
+                                    </p>
+                                    <details className="week-details">
+                                      <summary>Full notes & sources</summary>
+                                      <p>{week.emphasis}</p>
+                                      <p>
+                                        <strong>Checkpoint:</strong>{" "}
+                                        {week.checkpoint}
+                                      </p>
+                                      {evidence(week.evidenceIds)}
+                                    </details>
+                                  </article>
+                                );
+                              })}
+                          </div>
                         </section>
                       );
                     })}
