@@ -1,4 +1,5 @@
 "use client";
+import { useDateFormat } from "./preferences-provider";
 import Link from "next/link";
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
@@ -20,6 +21,7 @@ export function WeekEditor({
   initial: WeekView;
   seed: WeekContent;
 }) {
+  const date = useDateFormat();
   const router = useRouter();
   const [content, setContent] = useState(seed),
     [dirty, setDirty] = useState(false),
@@ -102,7 +104,8 @@ export function WeekEditor({
       </p>
       <h1>A clear purpose for this week.</h1>
       <p>
-        {display.week.start} to {display.week.end} · {display.timezone}
+        {date(display.week.start)} to {date(display.week.end)} ·{" "}
+        {display.timezone}
       </p>
       <p>{display.week.emphasis}</p>
       <p role="status">
@@ -320,8 +323,8 @@ export function WeekEditor({
         )}
         {display.events.map((e) => (
           <p key={e.id}>
-            <strong>{e.type.replaceAll("_", " ")}</strong> · {e.start} to{" "}
-            {e.end}
+            <strong>{e.type.replaceAll("_", " ")}</strong> · {date(e.start)} to{" "}
+            {date(e.end)}
             {e.time ? ` · ${e.time}` : ""}
             {e.blocksPractice ? " · Blocks practice" : ""}
           </p>
@@ -329,7 +332,7 @@ export function WeekEditor({
         {display.sessions.map((s) => (
           <fieldset className="row-card" key={s.id}>
             <legend>
-              {s.date} · {s.time} · {s.minutes} min · {s.status}
+              {date(s.date)} · {s.time} · {s.minutes} min · {s.status}
             </legend>
             {s.override && (
               <p className="small">

@@ -1,4 +1,5 @@
 "use client";
+import { useDateFormat } from "./preferences-provider";
 import {
   useEffect,
   useId,
@@ -47,6 +48,7 @@ function Field({
   );
 }
 export function SetupForm({ initial }: { initial: SetupView }) {
+  const date = useDateFormat();
   const [view, setView] = useState(initial);
   const [data, setData] = useState(initial.data);
   const [step, setStep] = useState(0);
@@ -777,8 +779,9 @@ export function SetupForm({ initial }: { initial: SetupView }) {
                   {data.playerCount ?? "Unknown"} players
                 </p>
                 <p>
-                  {data.start ?? "Start date needed"} →{" "}
-                  {data.end ?? "End date needed"} · {data.timezone}
+                  {data.start ? date(data.start) : "Start date needed"} →{" "}
+                  {data.end ? date(data.end) : "End date needed"} ·{" "}
+                  {data.timezone}
                 </p>
                 <p>
                   {data.availability.length} regular practice slots ·{" "}

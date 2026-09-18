@@ -1,4 +1,5 @@
 "use client";
+import { useDateFormat } from "./preferences-provider";
 import { ReviewRoadmapButton } from "./review-roadmap-button";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -24,6 +25,7 @@ const errors: Record<string, string> = {
     "The AI provider is temporarily limiting requests. Try again later.",
 };
 export function DraftView({ initial }: { initial: GenerationView }) {
+  const date = useDateFormat();
   const [view, setView] = useState(initial),
     [error, setError] = useState("");
   const busy = view.status === "queued" || view.status === "running";
@@ -67,7 +69,7 @@ export function DraftView({ initial }: { initial: GenerationView }) {
             <li key={id}>
               Coach report ·{" "}
               {reportFields[source?.field as ReportField] ?? "Source"}:{" "}
-              {source?.value} ({source?.reportedAt.slice(0, 10)})
+              {source?.value} ({date(source?.reportedAt)})
             </li>
           );
         })}
@@ -149,7 +151,7 @@ export function DraftView({ initial }: { initial: GenerationView }) {
                           <p className="small">
                             {s.confidence} ·{" "}
                             {s.value ? "Coach report" : "Unanswered input"} ·{" "}
-                            {s.reportedAt.slice(0, 10)}
+                            {date(s.reportedAt)}
                           </p>
                         </div>
                       ))}
@@ -228,7 +230,8 @@ export function DraftView({ initial }: { initial: GenerationView }) {
                       return (
                         <section className="week-phase" key={p.id}>
                           <p className="eyebrow">
-                            {p.type.replace("_", "-")} · {p.start} to {p.end}
+                            {p.type.replace("_", "-")} · {date(p.start)} to{" "}
+                            {date(p.end)}
                           </p>
                           <details className="phase-notes">
                             <summary>Phase priorities & rationale</summary>
@@ -255,7 +258,7 @@ export function DraftView({ initial }: { initial: GenerationView }) {
                                   >
                                     <h3>Week {w.sequence}</h3>
                                     <p className="small">
-                                      {w.start} → {w.end}
+                                      {date(w.start)} → {date(w.end)}
                                     </p>
                                     <p className="week-emphasis">
                                       {week.emphasis}

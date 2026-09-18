@@ -1,3 +1,4 @@
+import { RoadmapLibrary } from "../../components/roadmap-library";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { database } from "../../server/db/runtime";
@@ -16,8 +17,7 @@ export default async function SeasonPage() {
       return {
         setup,
         roadmap: seasonId ? await r.roadmap().summary(seasonId) : null,
-        runs:
-          teamId && seasonId ? await r.planning().list(teamId, seasonId) : [],
+        runs: teamId && seasonId ? await r.library().list(seasonId) : [],
       };
     });
   } catch (e) {
@@ -88,28 +88,7 @@ export default async function SeasonPage() {
           />
         )}
       </section>
-      <section className="card draft-history">
-        <h2>Saved drafts & attempts</h2>
-        {!result.runs.length ? (
-          <p>
-            No drafts yet. Your saved team inputs are ready whenever you are.
-          </p>
-        ) : (
-          <ul>
-            {result.runs.map((r) => (
-              <li key={r.id}>
-                <Link href={"/drafts/" + r.id}>
-                  {r.action === "assessSeason"
-                    ? "Assessment"
-                    : "Season roadmap"}
-                </Link>{" "}
-                · {r.status === "succeeded" ? "Draft saved" : r.status} ·{" "}
-                {r.created.slice(0, 10)}
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+      <RoadmapLibrary items={result.runs} />
     </main>
   );
 }

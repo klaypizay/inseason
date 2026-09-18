@@ -1,3 +1,4 @@
+import { LibraryRepository } from "./preferences";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { day, setupSchema } from "../../domain/onboarding";
@@ -174,6 +175,16 @@ export class RoadmapRepository {
     );
     return id;
   }
+  private async requireAvailable(id: string | null) {
+    if (
+      id &&
+      (await new LibraryRepository(this.q, this.actor).item(id)).state ===
+        "trash"
+    )
+      throw new PlanRuleError(
+        "Restore this roadmap from Trash before reviewing it.",
+      );
+  }
   private assertLatest(s: SeasonRow, v: PlanVersion) {
     if (
       s.review_plan_id !== v.id ||
@@ -193,6 +204,7 @@ export class RoadmapRepository {
       s = await this.season(g.seasonId, true);
     const existing = await this.existing(s, request);
     if (existing) return existing;
+    await this.requireAvailable(generationId);
     if (g.contextVersion !== s.context_version)
       throw new PlanRuleError(
         "Team settings changed. Generate a fresh roadmap first.",
@@ -323,6 +335,7 @@ export class RoadmapRepository {
     const old = await this.version(id),
       s = await this.season(old.seasonId, true),
       existing = await this.existing(s, request);
+    await this.requireAvailable(old.generationId);
     if (existing) return existing;
     if (
       s.current_plan_id !== expectedCurrent ||
@@ -464,6 +477,12 @@ export class RoadmapRepository {
       plan.phases.some((p) => !oldPhases.includes(p.id))
     )
       throw new PlanRuleError("Phase identities must match team setup.");
+    await this.requireAvailable(v.generationId);
+    if (v.generationId)
+      await this.q(
+        "update coach.generation_runs set library_state='active',library_revision=library_revision+1 where id=$1 and library_state<>'active'",
+        [v.generationId],
+      );
     const context = s.context_version + 1;
     const accepted = await this.insert(
       s,

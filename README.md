@@ -172,3 +172,23 @@ the test skips otherwise to avoid accidental paid generation. The optional
 one call with no paid retries. The original authorized ledger is now fully reserved;
 never reset it to bypass a budget. See [M4 design](docs/M4-design.md) and
 [M4 verification](docs/M4-verification.md).
+
+## Review preferences and roadmap library
+
+Dates default to **MM/DD/YYYY**. Open **Settings** in the header to save a date
+format and coach display name, or follow **Edit coach & team profile** for the
+existing profile and season fields. Native calendar pickers follow the browser's
+locale; all displayed calendar dates use the saved preference.
+
+Open **Season** to organize saved roadmaps and assessments. **Name & organize**
+renames an item, assigns a folder (type to create one), or moves it to Archive or
+Trash. Use the Show and Folder filters to find it later. Trash is recoverable:
+choose Library in its details to restore it. It retains historical records and
+is not permanent privacy deletion. Accept a replacement before moving the active
+roadmap out of the library.
+
+On a roadmap, review the phase and week cards before accepting. A week opens in
+a dialog with Previous/Next week navigation and a Phase priorities tab. Closing
+it or pressing Escape keeps edits and returns to the same place on the board.
+The sticky Save/Accept bar saves those edits; closing a dialog alone does not
+save them. Apply migration 008 before running this version.

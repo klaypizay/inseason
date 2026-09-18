@@ -1,5 +1,7 @@
 "use client";
+import { useDateFormat, useDateText } from "./preferences-provider";
 import Link from "next/link";
+import { Overlay } from "./overlay";
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -14,6 +16,10 @@ import {
   saveRoadmap,
 } from "../server/roadmap/actions";
 export function RoadmapEditor({ initial }: { initial: RoadmapView }) {
+  const date = useDateFormat();
+  const dateText = useDateText();
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editorTab, setEditorTab] = useState<"week" | "phase">("week");
   const { version: v, today } = initial,
     p = v.plan;
   const router = useRouter();
@@ -53,7 +59,7 @@ export function RoadmapEditor({ initial }: { initial: RoadmapView }) {
         const result = await work();
         if (result.id) {
           setDirty(false);
-          router.push("/roadmaps/" + result.id);
+          router.push("/roadmaps/" + result.id, { scroll: false });
           router.refresh();
         } else setError(result.error ?? "Unable to save.");
       } catch {
@@ -87,7 +93,8 @@ export function RoadmapEditor({ initial }: { initial: RoadmapView }) {
           : "Review your season roadmap."}
       </h1>
       <p>
-        {p.start} to {p.end} · {p.timezone} · {p.weeks.length} teaching weeks ·{" "}
+        {date(p.start)} to {date(p.end)} · {p.timezone} · {p.weeks.length}{" "}
+        teaching weeks ·{" "}
         {p.sessions.filter((s) => s.status === "scheduled").length} scheduled
         sessions
       </p>
@@ -102,7 +109,7 @@ export function RoadmapEditor({ initial }: { initial: RoadmapView }) {
       </p>
       {error && (
         <p role="alert" className="error">
-          {error}
+          {dateText(error)}
         </p>
       )}
       {!editable && (
@@ -123,7 +130,7 @@ export function RoadmapEditor({ initial }: { initial: RoadmapView }) {
           <h2>Resolve before acceptance</h2>
           <ul>
             {initial.conflicts.map((x, i) => (
-              <li key={i}>{x}</li>
+              <li key={i}>{dateText(x)}</li>
             ))}
           </ul>
           <p>
@@ -133,18 +140,40 @@ export function RoadmapEditor({ initial }: { initial: RoadmapView }) {
           </p>
         </section>
       )}
+      {editable && (
+        <div className="save-bar button-row review-actions">
+          <p>
+            {dirty ? "Unsaved review edits" : "Review each week, then accept"}
+          </p>
+          <button
+            disabled={pending || calendar !== null}
+            onClick={() => save(false)}
+          >
+            Save draft edits
+          </button>
+          <button
+            disabled={
+              pending || calendar !== null || initial.conflicts.length > 0
+            }
+            onClick={() => save(true)}
+          >
+            Accept roadmap
+          </button>
+        </div>
+      )}
       <section className="week-board" aria-labelledby="week-board-title">
         <h2 id="week-board-title" className="board-title">
           Your season at a glance
         </h2>
         <p className="small">
-          Select a week to review or edit it. Cards reflect your unsaved
-          teaching edits.
+          Review each phase and week before accepting. Select a card to edit in
+          a popup without losing your place. Cards reflect your unsaved edits.
         </p>
         {p.phases.map((group) => (
           <section className="week-phase" key={group.id}>
             <h3 className="eyebrow">
-              {group.type.replaceAll("_", " ")} · {group.start} to {group.end}
+              {group.type.replaceAll("_", " ")} · {date(group.start)} to{" "}
+              {date(group.end)}
             </h3>
             <div className="week-grid">
               {p.weeks
@@ -161,17 +190,18 @@ export function RoadmapEditor({ initial }: { initial: RoadmapView }) {
                       key={w.id}
                       aria-label={`Review week ${p.weeks.indexOf(w) + 1}`}
                       aria-pressed={selected === w.id}
-                      aria-controls="week-editor"
+                      aria-haspopup="dialog"
                       onClick={() => {
                         setSelected(w.id);
-                        document.getElementById("week-editor")?.focus();
+                        setEditorTab("week");
+                        setEditorOpen(true);
                       }}
                     >
                       <span className="week-card-heading">
                         Week {p.weeks.indexOf(w) + 1}
                       </span>
                       <span className="small">
-                        {w.start} → {w.end}
+                        {date(w.start)} → {date(w.end)}
                       </span>
                       <span className="week-badges">
                         <span>{count} scheduled</span>
@@ -188,7 +218,7 @@ export function RoadmapEditor({ initial }: { initial: RoadmapView }) {
                       </span>
                       <span className="week-open">
                         {selected === w.id
-                          ? "Selected · review below"
+                          ? "Selected · review week"
                           : "Review week →"}
                       </span>
                     </button>
@@ -202,7 +232,7 @@ export function RoadmapEditor({ initial }: { initial: RoadmapView }) {
         <h2>What comes next</h2>
         <p>
           <strong>
-            {week.start} to {week.end}:
+            {date(week.start)} to {date(week.end)}:
           </strong>{" "}
           {week.emphasis}
         </p>
@@ -252,10 +282,45 @@ export function RoadmapEditor({ initial }: { initial: RoadmapView }) {
           about a player.
         </p>
       </section>
-      <section className="card draft-section">
-        <h2 id="week-editor" tabIndex={-1}>
-          Explore phases & weeks
-        </h2>
+      <Overlay
+        open={editorOpen}
+        onClose={() => setEditorOpen(false)}
+        title={`Review week ${p.weeks.indexOf(week) + 1}`}
+      >
+        <p className="small">
+          Changes stay in this review when you close. Save draft edits or accept
+          the roadmap to save them.
+        </p>
+        <div className="button-row">
+          <button
+            className="secondary"
+            disabled={p.weeks.indexOf(week) === 0}
+            onClick={() => setSelected(p.weeks[p.weeks.indexOf(week) - 1].id)}
+          >
+            Previous week
+          </button>
+          <button
+            className="secondary"
+            disabled={p.weeks.indexOf(week) === p.weeks.length - 1}
+            onClick={() => setSelected(p.weeks[p.weeks.indexOf(week) + 1].id)}
+          >
+            Next week
+          </button>
+          <button
+            className="secondary"
+            aria-pressed={editorTab === "week"}
+            onClick={() => setEditorTab("week")}
+          >
+            Week details
+          </button>
+          <button
+            className="secondary"
+            aria-pressed={editorTab === "phase"}
+            onClick={() => setEditorTab("phase")}
+          >
+            Phase priorities
+          </button>
+        </div>
         <nav className="button-row" aria-label="Phases">
           {p.phases.map((x) => (
             <button
@@ -278,216 +343,219 @@ export function RoadmapEditor({ initial }: { initial: RoadmapView }) {
           >
             {p.weeks.map((w, i) => (
               <option key={w.id} value={w.id}>
-                Week {i + 1}: {w.start} to {w.end}
+                Week {i + 1}: {date(w.start)} to {date(w.end)}
                 {w.locked ? " · locked" : ""}
               </option>
             ))}
           </select>
         </label>
-        <h3>
-          {phase.type.replaceAll("_", " ")} · {phase.start} to {phase.end}
-        </h3>
-        <label>
-          Why this phase?
-          <textarea
-            disabled={!editable || calendar !== null || pending}
-            maxLength={600}
-            value={edits.phases.find((x) => x.id === phase.id)!.rationale}
-            onChange={(e) =>
-              update({
-                ...edits,
-                phases: edits.phases.map((x) =>
-                  x.id === phase.id ? { ...x, rationale: e.target.value } : x,
-                ),
-              })
-            }
-          />
-        </label>
-        <h3>Phase goals</h3>
-        {p.goals
-          .filter((g) => g.phaseId === phase.id)
-          .map((g, i) => {
-            const draft = edits.goals.find((x) => x.id === g.id)!;
-            return (
-              <fieldset className="row-card" key={g.id}>
-                <legend>
-                  Goal {i + 1}
-                  {g.locked ? " · locked" : ""}
-                </legend>
-                <label>
-                  Goal description
-                  <textarea
-                    maxLength={600}
-                    disabled={
-                      !editable || calendar !== null || pending || g.locked
-                    }
-                    value={draft.description}
-                    onChange={(e) =>
-                      update({
-                        ...edits,
-                        goals: edits.goals.map((x) =>
-                          x.id === g.id
-                            ? { ...x, description: e.target.value }
-                            : x,
-                        ),
-                      })
-                    }
-                  />
-                </label>
-                <label>
-                  Observable success criteria
-                  <textarea
-                    maxLength={600}
-                    disabled={
-                      !editable || calendar !== null || pending || g.locked
-                    }
-                    value={draft.successCriteria}
-                    onChange={(e) =>
-                      update({
-                        ...edits,
-                        goals: edits.goals.map((x) =>
-                          x.id === g.id
-                            ? { ...x, successCriteria: e.target.value }
-                            : x,
-                        ),
-                      })
-                    }
-                  />
-                </label>
-                <label className="check">
-                  <input
-                    type="checkbox"
-                    checked={draft.locked}
-                    disabled={!editable || calendar !== null || pending}
-                    onChange={(e) =>
-                      update({
-                        ...edits,
-                        goals: edits.goals.map((x) =>
-                          x.id === g.id
-                            ? { ...x, locked: e.target.checked }
-                            : x,
-                        ),
-                      })
-                    }
-                  />
-                  Lock goal text and success criteria
-                </label>
-              </fieldset>
-            );
-          })}
-        <h3>
-          Week {p.weeks.indexOf(week) + 1} · {week.start} to {week.end}
-        </h3>
-        <p className="small">
-          A lock protects teaching content. Date moves still require calendar
-          review. Save and accept an unlock before editing protected text in an
-          active plan.
-        </p>
-        <label>
-          Weekly emphasis
-          <textarea
-            maxLength={600}
-            disabled={
-              !editable ||
-              calendar !== null ||
-              pending ||
-              week.locked ||
-              week.start < today
-            }
-            value={edits.weeks.find((x) => x.id === week.id)!.emphasis}
-            onChange={(e) =>
-              update({
-                ...edits,
-                weeks: edits.weeks.map((x) =>
-                  x.id === week.id ? { ...x, emphasis: e.target.value } : x,
-                ),
-              })
-            }
-          />
-        </label>
-        <label>
-          Weekly checkpoint
-          <textarea
-            maxLength={600}
-            disabled={
-              !editable ||
-              calendar !== null ||
-              pending ||
-              week.locked ||
-              week.start < today
-            }
-            value={edits.weeks.find((x) => x.id === week.id)!.checkpoint}
-            onChange={(e) =>
-              update({
-                ...edits,
-                weeks: edits.weeks.map((x) =>
-                  x.id === week.id ? { ...x, checkpoint: e.target.value } : x,
-                ),
-              })
-            }
-          />
-        </label>
-        <label className="check">
-          <input
-            type="checkbox"
-            disabled={
-              !editable || calendar !== null || pending || week.start < today
-            }
-            checked={edits.weeks.find((x) => x.id === week.id)!.locked}
-            onChange={(e) =>
-              update({
-                ...edits,
-                weeks: edits.weeks.map((x) =>
-                  x.id === week.id ? { ...x, locked: e.target.checked } : x,
-                ),
-              })
-            }
-          />
-          Lock this week&apos;s teaching content
-        </label>
-        <h3>This week&apos;s calendar</h3>
-        {sessions.length ? (
-          <ul>
-            {sessions.map((s) => (
-              <li key={s.id}>
-                {s.date} · {s.time} · {s.minutes} minutes · {s.status}
-                {s.override ? " · coach override: " + s.override : ""}
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p>
-            No team practice this week. Rest or competition does not imply an
-            extra practice.
-          </p>
+        {editorTab === "phase" && (
+          <>
+            <h3>
+              {phase.type.replaceAll("_", " ")} · {date(phase.start)} to{" "}
+              {date(phase.end)}
+            </h3>
+            <label>
+              Why this phase?
+              <textarea
+                disabled={!editable || calendar !== null || pending}
+                maxLength={600}
+                value={edits.phases.find((x) => x.id === phase.id)!.rationale}
+                onChange={(e) =>
+                  update({
+                    ...edits,
+                    phases: edits.phases.map((x) =>
+                      x.id === phase.id
+                        ? { ...x, rationale: e.target.value }
+                        : x,
+                    ),
+                  })
+                }
+              />
+            </label>
+            <h3>Phase goals</h3>
+            {p.goals
+              .filter((g) => g.phaseId === phase.id)
+              .map((g, i) => {
+                const draft = edits.goals.find((x) => x.id === g.id)!;
+                return (
+                  <fieldset className="row-card" key={g.id}>
+                    <legend>
+                      Goal {i + 1}
+                      {g.locked ? " · locked" : ""}
+                    </legend>
+                    <label>
+                      Goal description
+                      <textarea
+                        maxLength={600}
+                        disabled={
+                          !editable || calendar !== null || pending || g.locked
+                        }
+                        value={draft.description}
+                        onChange={(e) =>
+                          update({
+                            ...edits,
+                            goals: edits.goals.map((x) =>
+                              x.id === g.id
+                                ? { ...x, description: e.target.value }
+                                : x,
+                            ),
+                          })
+                        }
+                      />
+                    </label>
+                    <label>
+                      Observable success criteria
+                      <textarea
+                        maxLength={600}
+                        disabled={
+                          !editable || calendar !== null || pending || g.locked
+                        }
+                        value={draft.successCriteria}
+                        onChange={(e) =>
+                          update({
+                            ...edits,
+                            goals: edits.goals.map((x) =>
+                              x.id === g.id
+                                ? { ...x, successCriteria: e.target.value }
+                                : x,
+                            ),
+                          })
+                        }
+                      />
+                    </label>
+                    <label className="check">
+                      <input
+                        type="checkbox"
+                        checked={draft.locked}
+                        disabled={!editable || calendar !== null || pending}
+                        onChange={(e) =>
+                          update({
+                            ...edits,
+                            goals: edits.goals.map((x) =>
+                              x.id === g.id
+                                ? { ...x, locked: e.target.checked }
+                                : x,
+                            ),
+                          })
+                        }
+                      />
+                      Lock goal text and success criteria
+                    </label>
+                  </fieldset>
+                );
+              })}
+          </>
         )}
-        {p.events
-          .filter((e) => e.start <= week.end && e.end >= week.start)
-          .map((e) => (
-            <p key={e.id}>
-              {e.type} · {e.title || "Untitled event"} · {e.start} to {e.end}
-              {e.blocksPractice ? " · blocks practice" : ""}
+        {editorTab === "week" && (
+          <>
+            <h3>
+              Week {p.weeks.indexOf(week) + 1} · {date(week.start)} to{" "}
+              {date(week.end)}
+            </h3>
+            <p className="small">
+              A lock protects teaching content. Date moves still require
+              calendar review. Save and accept an unlock before editing
+              protected text in an active plan.
             </p>
-          ))}
-      </section>
-      {editable && (
-        <div className="save-bar button-row">
-          <button
-            disabled={pending || calendar !== null}
-            onClick={() => save(false)}
-          >
-            Save draft edits
-          </button>
-          <button
-            disabled={
-              pending || calendar !== null || initial.conflicts.length > 0
-            }
-            onClick={() => save(true)}
-          >
-            Accept roadmap
-          </button>
-        </div>
-      )}
+            <label>
+              Weekly emphasis
+              <textarea
+                maxLength={600}
+                disabled={
+                  !editable ||
+                  calendar !== null ||
+                  pending ||
+                  week.locked ||
+                  week.start < today
+                }
+                value={edits.weeks.find((x) => x.id === week.id)!.emphasis}
+                onChange={(e) =>
+                  update({
+                    ...edits,
+                    weeks: edits.weeks.map((x) =>
+                      x.id === week.id ? { ...x, emphasis: e.target.value } : x,
+                    ),
+                  })
+                }
+              />
+            </label>
+            <label>
+              Weekly checkpoint
+              <textarea
+                maxLength={600}
+                disabled={
+                  !editable ||
+                  calendar !== null ||
+                  pending ||
+                  week.locked ||
+                  week.start < today
+                }
+                value={edits.weeks.find((x) => x.id === week.id)!.checkpoint}
+                onChange={(e) =>
+                  update({
+                    ...edits,
+                    weeks: edits.weeks.map((x) =>
+                      x.id === week.id
+                        ? { ...x, checkpoint: e.target.value }
+                        : x,
+                    ),
+                  })
+                }
+              />
+            </label>
+            <label className="check">
+              <input
+                type="checkbox"
+                disabled={
+                  !editable ||
+                  calendar !== null ||
+                  pending ||
+                  week.start < today
+                }
+                checked={edits.weeks.find((x) => x.id === week.id)!.locked}
+                onChange={(e) =>
+                  update({
+                    ...edits,
+                    weeks: edits.weeks.map((x) =>
+                      x.id === week.id ? { ...x, locked: e.target.checked } : x,
+                    ),
+                  })
+                }
+              />
+              Lock this week&apos;s teaching content
+            </label>
+            <h3>This week&apos;s calendar</h3>
+            {sessions.length ? (
+              <ul>
+                {sessions.map((s) => (
+                  <li key={s.id}>
+                    {date(s.date)} · {s.time} · {s.minutes} minutes · {s.status}
+                    {s.override ? " · coach override: " + s.override : ""}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p>
+                No team practice this week. Rest or competition does not imply
+                an extra practice.
+              </p>
+            )}
+            {p.events
+              .filter((e) => e.start <= week.end && e.end >= week.start)
+              .map((e) => (
+                <p key={e.id}>
+                  {e.type} · {e.title || "Untitled event"} · {date(e.start)} to{" "}
+                  {date(e.end)}
+                  {e.blocksPractice ? " · blocks practice" : ""}
+                </p>
+              ))}
+          </>
+        )}
+        <button onClick={() => setEditorOpen(false)}>
+          Keep edits &amp; close
+        </button>
+      </Overlay>
       {editable && (
         <section className="card draft-section">
           <h2 id="calendar-review">Review calendar changes</h2>
@@ -655,7 +723,7 @@ export function RoadmapEditor({ initial }: { initial: RoadmapView }) {
                         Week {i + 1}: {old.emphasis}
                       </h3>
                       <p>
-                        Was {old.start} to {old.end}
+                        Was {date(old.start)} to {date(old.end)}
                       </p>
                       <label>
                         Week start
@@ -723,7 +791,7 @@ export function RoadmapEditor({ initial }: { initial: RoadmapView }) {
                   return (
                     <fieldset className="row-card" key={x.id} disabled={fixed}>
                       <legend>
-                        {old.date} {old.time} · {old.status}
+                        {date(old.date)} {old.time} · {old.status}
                         {fixed ? " · fixed history" : ""}
                       </legend>
                       <label>

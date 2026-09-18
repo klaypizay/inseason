@@ -1,3 +1,4 @@
+import { CoachGreeting } from "../../components/preferences-provider";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Unauthorized } from "../../domain/errors";
@@ -29,7 +30,7 @@ export default async function Today() {
         </form>
       </div>
       <p className="eyebrow">YOUR COACHING HOME</p>
-      <h1>Welcome back, coach.</h1>
+      <CoachGreeting />
       <p className="lede">Make room for the next small step.</p>
       <div className="dashboard">
         <section className="card">

@@ -1,3 +1,4 @@
+import { LibraryDetails } from "../../../components/roadmap-library";
 import Link from "next/link";
 import { redirect, notFound } from "next/navigation";
 import { database } from "../../../server/db/runtime";
@@ -16,9 +17,13 @@ export default async function DraftPage({
   const { id } = await params;
   if (!z.uuid().safeParse(id).success) notFound();
   let view;
+  let library;
   try {
     view = await withSession(database, await sessionToken(), (r) =>
       r.planning().get(id),
+    );
+    library = await withSession(database, await sessionToken(), (r) =>
+      r.library().item(id),
     );
   } catch (e) {
     if (e instanceof Unauthorized) redirect("/login");
@@ -28,6 +33,12 @@ export default async function DraftPage({
   return (
     <main id="main">
       <Link href="/season">← Season drafts</Link>
+      {library && (
+        <LibraryDetails
+          key={library.id + ":" + library.revision}
+          initial={library}
+        />
+      )}
       <DraftView initial={view} />
     </main>
   );

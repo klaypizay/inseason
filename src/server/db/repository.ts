@@ -1,3 +1,4 @@
+import { PreferencesRepository, LibraryRepository } from "./preferences";
 import { WeekRepository } from "./week";
 import { RoadmapRepository } from "./roadmap";
 import { PlanningRepository } from "./planning";
@@ -56,6 +57,12 @@ class Repository {
     private actor: string,
     private fresh: boolean,
   ) {}
+  preferences() {
+    return new PreferencesRepository(this.q, this.actor);
+  }
+  library() {
+    return new LibraryRepository(this.q, this.actor);
+  }
   week() {
     return new WeekRepository(this.q, this.actor);
   }

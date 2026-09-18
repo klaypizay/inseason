@@ -567,3 +567,116 @@ it("an availability override cannot bypass a blocking competition event", async 
   session.status = "completed";
   expect(eligibleSessions(plan, f.week).map((s) => s.id)).toContain(session.id);
 });
+
+it("keeps preferences private and rejects stale settings", async () => {
+  const a = await fixture(),
+    b = await fixture();
+  const first = await withSession(db, a.token, (r) => r.preferences().get());
+  expect(first.dateFormat).toBe("MM/DD/YYYY");
+  const saved = await withSession(db, a.token, (r) =>
+    r
+      .preferences()
+      .save({ ...first, displayName: "Coach A", dateFormat: "DD/MM/YYYY" }),
+  );
+  expect(saved.revision).toBe(1);
+  expect(
+    (await withSession(db, b.token, (r) => r.preferences().get())).displayName,
+  ).toBe("");
+  await expect(
+    withSession(db, a.token, (r) => r.preferences().save(first)),
+  ).rejects.toThrow(/another tab/);
+  await expect(
+    withSession(db, a.token, (r) =>
+      r.preferences().save({ ...saved, dateFormat: "invalid" }),
+    ),
+  ).rejects.toThrow();
+});
+it("organizes roadmap generations, blocks foreign access and protects the active plan", async () => {
+  const a = await fixture(),
+    b = await fixture();
+  const v = await withSession(db, a.token, (r) => r.roadmap().get(a.roadmap));
+  const id = v.version.generationId!;
+  const old = await withSession(db, a.token, (r) => r.library().item(id));
+  const input = {
+    name: "Spring development",
+    folder: "2027",
+    state: "active",
+    revision: old.revision,
+  };
+  const saved = await withSession(db, a.token, (r) =>
+    r.library().save(id, input),
+  );
+  expect(saved.name).toBe(input.name);
+  expect(saved.folder).toBe("2027");
+  await expect(
+    withSession(db, b.token, (r) => r.library().item(id)),
+  ).rejects.toThrow();
+  await expect(
+    withSession(db, b.token, (r) => r.library().save(id, input)),
+  ).rejects.toThrow();
+  await expect(
+    withSession(db, a.token, (r) => r.library().save(id, input)),
+  ).rejects.toThrow(/another tab/);
+  await expect(
+    withSession(db, a.token, (r) =>
+      r
+        .library()
+        .save(id, { ...input, revision: saved.revision, state: "trash" }),
+    ),
+  ).rejects.toThrow(/replacement/);
+  const generated = await generateSeason(
+    db,
+    a.token,
+    {
+      teamId: a.setup.teamId!,
+      seasonId: a.setup.seasonId!,
+      action: "draftRoadmap",
+      idempotencyKey: randomUUID(),
+    },
+    fixtureSeasonProvider,
+  );
+  const draft = await withSession(db, a.token, (r) =>
+    r.roadmap().open(generated.id, randomUUID()),
+  );
+  const details = await withSession(db, a.token, (r) =>
+    r.library().item(generated.id),
+  );
+  const trashed = await withSession(db, a.token, (r) =>
+    r.library().save(generated.id, {
+      name: "Second draft",
+      folder: "2027",
+      state: "trash",
+      revision: details.revision,
+    }),
+  );
+  expect(
+    (
+      await withSession(db, a.token, (r) =>
+        r.roadmap().summary(a.setup.seasonId!),
+      )
+    ).reviewId,
+  ).toBe(a.roadmap);
+  await expect(
+    withSession(db, a.token, (r) =>
+      r.roadmap().open(generated.id, randomUUID()),
+    ),
+  ).rejects.toThrow(/Restore/);
+  await expect(
+    withSession(db, a.token, (r) =>
+      r.roadmap().recover(draft, a.roadmap, a.roadmap, randomUUID()),
+    ),
+  ).rejects.toThrow(/Restore/);
+  await withSession(db, a.token, (r) =>
+    r.library().save(generated.id, {
+      name: trashed.name,
+      folder: trashed.folder,
+      state: "active",
+      revision: trashed.revision,
+    }),
+  );
+  expect(
+    await withSession(db, a.token, (r) =>
+      r.roadmap().open(generated.id, randomUUID()),
+    ),
+  ).toBeTruthy();
+});
