@@ -9,7 +9,8 @@ Scope: roadmap review, manual edits, acceptance, locks, phase/week navigation, c
 - Desktop and phone browser scenarios save edits, refresh, accept, lock, shift seven days, refresh accepted state and recover an earlier version with current dates/locks preserved. Temporary synthetic Auth users are deleted afterward; no email is sent. Screenshot inspection confirms responsive layout without horizontal overflow.
 - Saving projections in batches reduced round trips for week/session rows. Browser tests await the new version URL before refresh, preventing a test from reloading an old version while acceptance is still completing.
 - All ten desktop/mobile M3 and existing sign-in/isolation browser checks passed. Existing mutating M1 browser scenarios were not rerun against the user's current synthetic season; their local/hosted regression tests passed.
-- Formatter, lint, type/build and final Rafter results are recorded below after completion.
+- Final local/hosted suite: 37 passed, with only the opt-in paid AI test skipped. Formatting, lint, TypeScript and production build all passed. Source-only Rafter secrets scan returned zero findings; a separate exact-value check found no configured local secrets in staged source.
+- Standard remote Rafter scan `4db0aa86-8aeb-4bcd-b1e0-7a99d438e657` targets implementation commit `937942c`; completed with zero errors and two warnings for nonfunctional database connection placeholders in `.env.example:4–5`. These match prior reviewed warnings and contain no real credentials; no unresolved implementation findings were identified in this pass. GitHub Actions run [35315853793](https://github.com/klaypizay/basketballcoach.ing/actions/runs/35315853793) passed on that implementation commit.
 
 ## Security review
 
