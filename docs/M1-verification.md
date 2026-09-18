@@ -1,6 +1,6 @@
 # M1 verification
 
-Status: implementation and verification in progress. No M2 functionality added.
+Status: **M1 complete for the configured synthetic development project**. Functional acceptance, GitHub CI and Rafter review/scan passed for source commit e2120f1, with the two placeholder-only warnings dispositioned below. No M2 functionality added.
 
 ## Security review
 
@@ -16,9 +16,25 @@ Abuse/configuration: per-account setup save quota (60 per ten minutes), fixed pa
 
 ## Checks
 
-- Fresh PostgreSQL migrations and M0/M1 unit/integration scenarios passed locally.
-- Hosted Supabase isolation regression passed after migration 003.
-- Production build passed; final checks and browser acceptance are being completed.
-- Remote Rafter scan pending.
+- **18 unit/database tests passed, zero skips** with hosted tests enabled: fresh migrations, owner isolation, server-invalid dates/durations, partial drafts, Unknown provenance, stable IDs, stale writes and synthetic cascades.
+- Migration 003 applied to the configured synthetic Supabase project. Existing managed login and tenant isolation remain verified.
+- **10 Playwright tests passed, zero skips** in 1.9 minutes across desktop/mobile Edge. The live M1 scenario saves the first-year 13U/nine-player/twelve-week/two-90-minute/one-hoop fixture, resumes after reload, rejects zero duration, persists the unnamed roster, finishes setup and rejects a stale second tab. Existing login/logout/foreign-team scenarios pass.
+- Formatting, ESLint, typechecking and production build passed. No dependencies added.
+- Desktop and mobile setup screenshots inspected: readable labels and controls, no horizontal overflow; isolated browser preview has no page errors. Synthetic screenshots are ignored test artifacts.
+- Rafter source-only local secrets scan: **zero findings**. Staged files also checked against configured secret values, with no matches.
+- Remote Rafter fast scan **completed**: f07c22af-0f9a-42d3-a821-a4016de3c197, rafter-fast@0.10. **0 errors, 2 warnings**; both are cleartext-credential-in-url at .env.example:4–5. They contain literal password/HOST placeholders, not real credentials, and describe server-only PostgreSQL connection templates rather than browser URLs. Same reviewed false-positive disposition as M0; no new security findings. This is a reviewed scan with warnings, not a zero-warning scan. Paid Plus was not run.
+- GitHub CI: [run 35306424689](https://github.com/klaypizay/basketballcoach.ing/actions/runs/35306424689), **passed**, including formatting, lint, typecheck, tests, production build, Chromium checks and dependency audit.
+
+The first browser attempts uncovered ambiguous label associations and test selectors; labels are now explicitly linked to controls, assertions target the form rather than Next's route announcer, and remote save assertions allow network latency. Batched report/roster writes reduce round trips. Repeated test logins reached the intended login quota; only the two synthetic test-coach counters were reset before the successful run. Runtime rate-limit policies were not changed.
 
 Local secrets scanning with Betterleaks includes ignored files in this installed CLI configuration. It found only ignored local configuration and generated Next caches; these are not source exports. Scan the staged source snapshot separately before pushing. Do not copy ignored secrets into scan artifacts or logs.
+
+## Review evidence
+
+- Access control: src/server/onboarding/actions.ts:23; src/server/db/onboarding.ts:33,108; migrations/003_onboarding.sql:76. Session-derived actor, owner lookup, nested-ID checks and forced RLS.
+- Injection/input: src/domain/onboarding.ts:70,100; src/server/db/onboarding.ts:194. Strict bounded schemas, real calendar validation, fixed SQL identifiers and parameterized arrays; no arbitrary URL or shell sink.
+- Integrity/deletion: src/server/db/onboarding.ts:298; migrations/003_onboarding.sql:16,91. Fresh login, synthetic-only restrictive policy, hard FK cascades; source reports have insert/select-only runtime permissions.
+- Authentication/crypto: existing managed auth and opaque-session primitives unchanged; freshness now comes from the session creation timestamp, not last activity. No new cryptography or credentials.
+- Configuration/supply chain: next.config.ts:3 caps request bodies; package manifest/lockfile unchanged. No dependency install scripts added. Remote SCA is part of the required scan.
+- Logging/monitoring: server action returns bounded validation or generic infrastructure errors without request-body logging. Independent audit export and provider lifecycle revocation remain M0 pre-pilot gates.
+- AI/SSRF/deserialization: no live AI, tools, user-URL fetching, custom executable parser, or untrusted HTML is added. JSON.parse feeds a strict schema and explicit field mapping.
