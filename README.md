@@ -73,7 +73,7 @@ For the two-coach manual check: sign in separately as both seeded coaches; each 
 - AI fixture actions return typed Unknown drafts with no evidence or active-plan mutations. M2 implements assessment and roadmap schemas; later action placeholders remain unavailable to users.
 - No real youth data until the original privacy/vendor/retention/coaching and security launch gates are resolved. M1 verifies synthetic live-data cascades; production privacy deletion and operational backups remain future launch gates.
 
-Next milestone: **M4 — Weekly planner**.
+Next milestone: **M5 — Practice generator and player goals**.
 
 ## Syncing with GitHub
 
@@ -129,3 +129,46 @@ Once a roadmap is active, Team settings still accepts profile/roster/resource ed
 Apply migration 006 with `npm run db:migrate`. The new history tables are immutable to the runtime role, and calendar projections use forced ownership policies and tenant/season foreign keys. See [M3 design](docs/M3-design.md) and [M3 verification](docs/M3-verification.md).
 
 M3 hosted/browser tests provision isolated synthetic fixtures; the browser test creates and deletes a temporary confirmed adult test-coach login through `SUPABASE_SECRET_KEY`, without sending email. It uses fixture generation directly and makes no paid AI calls. Ordinary CI skips credentialed tests. Traces stay disabled. Existing M1 browser tests still mutate Demo Cedar; avoid running those against a season you are actively reviewing.
+
+## Weekly planner (M4)
+
+From **Season**, choose **Plan the next teaching week**, or open the accepted
+roadmap, select a week card and choose **Plan this week**. Start manually from the
+accepted emphasis or generate a weekly draft on demand. Choose one to three
+objectives, observable checks and season-goal links. Save a weekly draft to resume
+later; **Accept weekly plan** activates a new immutable weekly version. Detailed
+timed drills and practice blocks arrive in M5.
+
+Assign objectives to the accepted calendar slots. Editing an assignment marks it
+as a coach override; **Keep these assignments when regenerating** preserves it.
+Clear that option if you want a later generation to allocate priorities again.
+A week with no practices stays empty. Competition appears alongside sessions;
+no opponent name is needed. Use the calendar-review link to move a slot or record
+an explicit outside-availability override. Blocking events still require a date
+or event change in M3. Weekly generation never creates or moves practice dates.
+
+Lock an objective to preserve its identity, goal link, teaching text and observable
+check through regeneration. Save an unlock before editing that text. Past weeks
+are read-only; past/completed session assignments and their objectives stay fixed.
+Manual editing remains available without AI. While a generation is in progress,
+the editor pauses local changes; another tab's edits invalidate late results.
+
+Each weekly version links to the accepted roadmap used as its context. Roadmap or
+settings changes cannot silently overwrite a week. Accept an up-to-date roadmap,
+then choose **Refresh from accepted roadmap** and review the reconciled weekly
+draft before accepting it. Earlier versions remain readable through Weekly history;
+removed calendar slots never erase their historical assignments.
+
+Apply migration 007 with `npm run db:migrate`. New tables use forced ownership
+policies and tenant-safe foreign keys; versions are immutable to the runtime.
+Generation shares the existing two-active-run and daily quotas with season drafts.
+Refresh resumes a queued attempt; expired attempts report failure after five minutes.
+Development action-argument logging is disabled to keep coaching text out of logs.
+
+M4 tests use temporary synthetic fixtures. Run `tests/e2e/week.spec.ts` with a
+fixture-mode server and `COACH_AI_PROVIDER=fixture` in the test environment;
+the test skips otherwise to avoid accidental paid generation. The optional
+`RUN_LIVE_WEEK_TEST=1` test uses the existing `.env.m2-test-budget` ledger and permits
+one call with no paid retries. The original authorized ledger is now fully reserved;
+never reset it to bypass a budget. See [M4 design](docs/M4-design.md) and
+[M4 verification](docs/M4-verification.md).

@@ -100,6 +100,19 @@ export async function runGeneration(
   onAttempt: (attempt: number) => Promise<void>,
   timeoutMs = 60000,
 ) {
+  return runStructuredGeneration(
+    (repair, signal) => provider.generate(action, context, repair, signal),
+    (value) => validateGenerated(action, value, context),
+    onAttempt,
+    timeoutMs,
+  );
+}
+export async function runStructuredGeneration<T>(
+  generate: (repair: boolean, signal: AbortSignal) => Promise<ProviderResult>,
+  validate: (value: unknown) => T,
+  onAttempt: (attempt: number) => Promise<void>,
+  timeoutMs = 60000,
+) {
   const metrics: RunMetrics = {
     attempts: 0,
     inputTokens: 0,
@@ -120,15 +133,14 @@ export async function runGeneration(
           (resolve, reject) => {
             const abort = () => reject(new ProviderFailure("timeout", true));
             signal.addEventListener("abort", abort, { once: true });
-            provider
-              .generate(action, context, repair, signal)
+            generate(repair, signal)
               .then(resolve, reject)
               .finally(() => signal.removeEventListener("abort", abort));
           },
         );
         metrics.inputTokens += response.inputTokens;
         metrics.outputTokens += response.outputTokens;
-        const content = validateGenerated(action, response.value, context);
+        const content = validate(response.value);
         return {
           content,
           metrics: { ...metrics, latencyMs: Date.now() - started },

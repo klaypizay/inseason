@@ -208,9 +208,14 @@ export function RoadmapEditor({ initial }: { initial: RoadmapView }) {
         </p>
         <p>Watch for: {week.checkpoint}</p>
         <p>Why: {phase.rationale}</p>
+        {active && (
+          <Link className="button-link" href={"/weeks/" + week.id}>
+            Plan this week
+          </Link>
+        )}
         <p className="small">
-          These are calendar slots and teaching priorities. Detailed weekly
-          objectives and practice activities come in the next milestones.
+          Choose a week above, then detail its teaching objectives and practice
+          assignments.
         </p>
       </section>
       <section className="card draft-section">
@@ -485,7 +490,7 @@ export function RoadmapEditor({ initial }: { initial: RoadmapView }) {
       )}
       {editable && (
         <section className="card draft-section">
-          <h2>Review calendar changes</h2>
+          <h2 id="calendar-review">Review calendar changes</h2>
           <p>
             Preview future moves before accepting. Past/completed sessions stay
             fixed. Games and tournaments keep their dates unless you edit them

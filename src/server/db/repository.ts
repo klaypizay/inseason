@@ -1,3 +1,4 @@
+import { WeekRepository } from "./week";
 import { RoadmapRepository } from "./roadmap";
 import { PlanningRepository } from "./planning";
 import { OnboardingRepository } from "./onboarding";
@@ -55,6 +56,9 @@ class Repository {
     private actor: string,
     private fresh: boolean,
   ) {}
+  week() {
+    return new WeekRepository(this.q, this.actor);
+  }
   roadmap() {
     return new RoadmapRepository(this.q, this.actor);
   }

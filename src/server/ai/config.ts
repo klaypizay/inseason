@@ -1,3 +1,4 @@
+import { fixtureWeekProvider, openAIWeekProvider } from "./week-provider";
 import "server-only";
 import { fixtureSeasonProvider, ProviderFailure } from "./season-provider";
 import { openAISeasonProvider } from "./openai-season";
@@ -16,4 +17,15 @@ export function dailyQuota() {
   if (!Number.isInteger(n) || n < 1 || n > 100)
     throw new ProviderFailure("not_configured");
   return n;
+}
+
+export function configuredWeekProvider() {
+  const name = process.env.COACH_AI_PROVIDER ?? "fixture";
+  if (name === "fixture") return fixtureWeekProvider;
+  if (name === "openai")
+    return openAIWeekProvider(
+      process.env.OPENAI_API_KEY ?? "",
+      process.env.OPENAI_MODEL ?? "gpt-5.4-mini-2026-03-17",
+    );
+  throw new ProviderFailure("not_configured");
 }

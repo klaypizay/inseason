@@ -103,7 +103,7 @@ export class PlanningRepository {
       [season.program_id],
     );
     const [counts] = await this.q<{ active: number; daily: number }>(
-      "select count(*) filter(where status in ('queued','running') and lease_expires_at>now())::int as active,count(*) filter(where created_at>now()-interval '24 hours' and prompt_version='m2-v1')::int as daily from coach.generation_runs where program_id=$1",
+      "select count(*) filter(where status in ('queued','running') and lease_expires_at>now())::int as active,count(*) filter(where created_at>now()-interval '24 hours' and prompt_version in ('m2-v1','m4-v1'))::int as daily from coach.generation_runs where program_id=$1",
       [season.program_id],
     );
     if (counts.active >= 2)

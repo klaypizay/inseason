@@ -46,6 +46,13 @@ export default async function SeasonPage() {
           >
             Open accepted roadmap
           </Link>
+          {result.roadmap.nextWeekId && (
+            <p>
+              <Link href={"/weeks/" + result.roadmap.nextWeekId}>
+                Plan the next teaching week →
+              </Link>
+            </p>
+          )}
         </section>
       )}
       {result.roadmap?.reviewId &&

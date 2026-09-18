@@ -51,112 +51,135 @@ export function openAISeasonProvider(
         schema,
         context.sources.filter((s) => s.value !== null).map((s) => s.id),
       );
-      let response: Response;
-      try {
-        response = await fetch("https://api.openai.com/v1/responses", {
-          method: "POST",
-          redirect: "error",
-          signal,
-          headers: {
-            Authorization: "Bearer " + key,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model,
-            store: false,
-            max_output_tokens: 12000,
-            reasoning: { effort: "low" },
-            instructions:
-              instructions +
-              (repair
-                ? " Previous output did not match the schema. Return a complete valid JSON object following every schema field."
-                : ""),
-            input: [{ role: "user", content: input }],
-            text: {
-              format: {
-                type: "json_schema",
-                name: action,
-                strict: true,
-                schema,
-              },
-            },
-          }),
-        });
-      } catch {
-        throw new ProviderFailure(
-          signal.aborted ? "timeout" : "provider_unavailable",
-          true,
-        );
-      }
-      if (!response.ok) {
-        await response.body?.cancel();
-        throw new ProviderFailure(
-          response.status === 401 || response.status === 403
-            ? "provider_auth"
-            : response.status === 429
-              ? "provider_limit"
-              : "provider_unavailable",
-          response.status === 429 || response.status >= 500,
-        );
-      }
-      const reader = response.body?.getReader();
-      if (!reader) throw new ProviderFailure("invalid_response");
-      let bytes = 0;
-      const chunks: Uint8Array[] = [];
-      try {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          bytes += value.length;
-          if (bytes > 256000) {
-            await reader.cancel();
-            throw new ProviderFailure("response_too_large");
-          }
-          chunks.push(value);
-        }
-      } finally {
-        reader.releaseLock();
-      }
-      const payload = z
-        .object({
-          status: z.string(),
-          usage: z.object({
-            input_tokens: z.number().int().nonnegative(),
-            output_tokens: z.number().int().nonnegative(),
-          }),
-          output: z.array(
-            z.object({
-              type: z.string(),
-              content: z
-                .array(
-                  z.object({ type: z.string(), text: z.string().optional() }),
-                )
-                .optional(),
-            }),
-          ),
-        })
-        .safeParse(JSON.parse(Buffer.concat(chunks).toString("utf8")));
-      if (!payload.success) throw new ProviderFailure("invalid_response");
-      const { usage, output, status } = payload.data;
-      const parts = output.flatMap((o) => o.content ?? []);
-      if (parts.some((p) => p.type === "refusal"))
-        throw new ProviderFailure("refused");
-      let value: unknown = null;
-      if (status === "completed") {
-        try {
-          value = JSON.parse(
-            parts
-              .filter((p) => p.type === "output_text")
-              .map((p) => p.text ?? "")
-              .join(""),
-          );
-        } catch {}
-      }
-      return {
-        value,
-        inputTokens: usage.input_tokens,
-        outputTokens: usage.output_tokens,
-      };
+      return requestStructured(
+        key,
+        model,
+        action,
+        input,
+        schema,
+        instructions,
+        repair,
+        signal,
+      );
     },
+  };
+}
+export async function requestStructured(
+  key: string,
+  model: string,
+  action: string,
+  input: string,
+  schema: unknown,
+  instructions: string,
+  repair: boolean,
+  signal: AbortSignal,
+) {
+  if (!key || !/^[a-zA-Z0-9._-]{1,100}$/.test(model))
+    throw new ProviderFailure("not_configured");
+  if (Buffer.byteLength(input, "utf8") > 48000)
+    throw new ProviderFailure("context_too_large");
+  let response: Response;
+  try {
+    response = await fetch("https://api.openai.com/v1/responses", {
+      method: "POST",
+      redirect: "error",
+      signal,
+      headers: {
+        Authorization: "Bearer " + key,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model,
+        store: false,
+        max_output_tokens: 12000,
+        reasoning: { effort: "low" },
+        instructions:
+          instructions +
+          (repair
+            ? " Previous output did not match the schema. Return a complete valid JSON object following every schema field."
+            : ""),
+        input: [{ role: "user", content: input }],
+        text: {
+          format: {
+            type: "json_schema",
+            name: action,
+            strict: true,
+            schema,
+          },
+        },
+      }),
+    });
+  } catch {
+    throw new ProviderFailure(
+      signal.aborted ? "timeout" : "provider_unavailable",
+      true,
+    );
+  }
+  if (!response.ok) {
+    await response.body?.cancel();
+    throw new ProviderFailure(
+      response.status === 401 || response.status === 403
+        ? "provider_auth"
+        : response.status === 429
+          ? "provider_limit"
+          : "provider_unavailable",
+      response.status === 429 || response.status >= 500,
+    );
+  }
+  const reader = response.body?.getReader();
+  if (!reader) throw new ProviderFailure("invalid_response");
+  let bytes = 0;
+  const chunks: Uint8Array[] = [];
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      bytes += value.length;
+      if (bytes > 256000) {
+        await reader.cancel();
+        throw new ProviderFailure("response_too_large");
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  const payload = z
+    .object({
+      status: z.string(),
+      usage: z.object({
+        input_tokens: z.number().int().nonnegative(),
+        output_tokens: z.number().int().nonnegative(),
+      }),
+      output: z.array(
+        z.object({
+          type: z.string(),
+          content: z
+            .array(z.object({ type: z.string(), text: z.string().optional() }))
+            .optional(),
+        }),
+      ),
+    })
+    .safeParse(JSON.parse(Buffer.concat(chunks).toString("utf8")));
+  if (!payload.success) throw new ProviderFailure("invalid_response");
+  const { usage, output, status } = payload.data;
+  const parts = output.flatMap((o) => o.content ?? []);
+  if (parts.some((p) => p.type === "refusal"))
+    throw new ProviderFailure("refused");
+  let value: unknown = null;
+  if (status === "completed") {
+    try {
+      value = JSON.parse(
+        parts
+          .filter((p) => p.type === "output_text")
+          .map((p) => p.text ?? "")
+          .join(""),
+      );
+    } catch {}
+  }
+  return {
+    value,
+    inputTokens: usage.input_tokens,
+    outputTokens: usage.output_tokens,
   };
 }

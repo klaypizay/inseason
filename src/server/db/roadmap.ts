@@ -82,7 +82,15 @@ export class RoadmapRepository {
   }
   async summary(seasonId: string) {
     const s = await this.season(seasonId);
-    return { currentId: s.current_plan_id, reviewId: s.review_plan_id };
+    const plan = s.current_plan_id
+      ? (await this.version(s.current_plan_id)).plan
+      : null;
+    return {
+      currentId: s.current_plan_id,
+      reviewId: s.review_plan_id,
+      nextWeekId:
+        plan?.weeks.find((w) => w.end >= localToday(plan.timezone))?.id ?? null,
+    };
   }
   async get(id: string): Promise<RoadmapView> {
     const version = await this.version(id),
