@@ -30,3 +30,29 @@ Rafter web-app checklist was applied to the completed surface.
 
 Trash deliberately retains history; it is not a permanent-data-deletion feature.
 No paid AI calls are needed for this change.
+
+## Verification results
+
+- Migration 008 applied to the development database.
+- 47 local tests passed; 7 credentialed/live tests skipped in the ordinary suite.
+  New checks cover account isolation, stale writes, invalid date preferences,
+  date-only formatting, foreign roadmap access, active-roadmap protection,
+  Trash review-pointer reset, recovery rejection and restoration.
+- Typecheck, lint, formatting and production build passed. GitHub CI also passed
+  for implementation commit 616c46c; final scroll change is ae14e18.
+- Desktop and mobile settings/library browser flows passed: date preference and
+  display name survive reload, names and folders persist, folder filtering works,
+  drafts move to Trash and restore successfully.
+- Desktop and mobile roadmap browser flows passed after explicit scroll
+  restoration: popup editing, previous/next navigation, Escape/focus return,
+  unchanged board scroll, retained unsaved text, save/reload, accept, locks,
+  calendar shift and historical recovery.
+- Screenshots visually reviewed on desktop and mobile. Restarted dev server
+  verified with agent-browser; login loaded with no browser errors.
+- Source-only Rafter secret scan: no findings. Existing local environment files
+  were excluded. No new dependencies or paid AI calls.
+- Final source commit ae14e18 passed GitHub CI run 35398971197.
+- Rafter standard scan `96c801f2-daee-43f9-ba16-a382ddf44e7c` completed:
+  **0 errors, 2 warnings**. Both warnings are the existing placeholder credential
+  URL patterns in `.env.example:4–5`, not real credentials or new feature findings.
+  The manual review found no additional security issue in the changed surface.
