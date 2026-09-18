@@ -1,8 +1,18 @@
-# Season Coach · Milestone 0
+# Season Coach · Milestone 1
 
-Foundation for an adult basketball coach's private workspace. Includes managed sign-in, immediate app-session revocation, a responsive Today shell, private PostgreSQL schema and tenant-scoped repository, synthetic fixtures, CI and a deterministic AI interface. No live AI, onboarding or planning workflows yet.
+Foundation for an adult basketball coach's private workspace. Includes managed sign-in, immediate app-session revocation, a responsive Today shell, private PostgreSQL schema and tenant-scoped repository, synthetic fixtures, CI and a deterministic AI interface. M1 adds resumable team/coach setup, season phases, practice availability, events, optional roster aliases and attributed assessment inputs. Live AI and generated planning come in later milestones.
 
 Original specifications remain unchanged in [`md files/`](md%20files/). See [M0 design](docs/M0-design.md) for security decisions and [verification](docs/M0-verification.md) for actual results and outstanding gates.
+
+## Using team setup
+
+Sign in, choose **Team settings**, and work through the five setup steps. **Save progress** saves the current draft; **Save & continue** saves before moving on. You can switch steps without losing edits in the open tab. Save before leaving; reloading with unsaved changes prompts a browser warning. Failed saves preserve the form. A stale tab must reload before it can overwrite newer settings.
+
+Blank report answers remain **Unknown**. Saved statements are dated coach reports, not generated assessments. Approve a single in-season phase or enter your own phases covering the season; unused phases may be skipped. Dates are inclusive and practice times use the selected IANA timezone. Zero regular practice slots is valid. No practices are generated in M1.
+
+The synthetic acceptance fixture is a first-year 13U coach, nine players, twelve weeks (2027-01-04 through 2027-03-28), Monday/Wednesday 90-minute slots and one hoop. The browser scenario saves this fixture to Demo Cedar, retaining the existing player identity and adding optional aliases. Tests may update this synthetic team's setup. Do not use real player data.
+
+See [M1 design](docs/M1-design.md) and [M1 verification](docs/M1-verification.md). Synthetic program deletion is exercised through the repository tests, restricted to migration-marked synthetic programs, exact name confirmation and a login within ten minutes. It verifies live database cascades, not production backup erasure.
 
 ## Local setup
 
@@ -36,21 +46,21 @@ Browser tests require Chromium (`npx playwright install chromium`) or set `PLAYW
 
 The configured local environment also contains `E2E_COACH_A_EMAIL` / `E2E_COACH_A_PASSWORD` and equivalent `B` settings for the two-coach browser test. These generated test credentials and their real Auth UUIDs remain in `.env.local` only. No invitation or confirmation emails were sent. The optional `SUPABASE_SECRET_KEY` is operator-only for Auth provisioning; the app does not use it.
 
-To run all 13 unit/database tests against the configured development project in PowerShell:
+To run all unit/database tests against the configured development project in PowerShell:
 
 ```powershell
 $env:RUN_HOSTED_DB_TESTS = '1'
 node --env-file=.env.local node_modules/vitest/vitest.mjs run
 ```
 
-To run all eight browser tests with those credentials:
+To run all browser tests with those credentials:
 
 ```powershell
 $env:PLAYWRIGHT_CHANNEL = 'msedge'
 node --env-file=.env.local node_modules/@playwright/test/cli.js test --workers=1
 ```
 
-The test runner normally starts its own app on port 3187. If you deliberately started this checkout's server there with `npm run dev -- --port 3187`, set `PLAYWRIGHT_REUSE_SERVER=1` in the test process to reuse it (also avoids Windows test-server teardown issues). The server needs network access to Supabase. CI runs synthetic local checks without live project credentials; hosted tests remain explicitly skipped there.
+The test runner normally starts its own app on port 3187. If you deliberately started this checkout's server there with `npm run dev -- --port 3187`, set `PLAYWRIGHT_REUSE_SERVER=1` in the test process to reuse it (also avoids Windows test-server teardown issues). To reuse this checkout on port 3000, also set PLAYWRIGHT_BASE_URL=http://localhost:3000. The server needs network access to Supabase. CI runs synthetic local checks without live project credentials; hosted tests remain explicitly skipped there.
 
 For the two-coach manual check: sign in separately as both seeded coaches; each Today page should show only its own team. Reload; sign out; the previous cookie must fail to reopen `/today`. Repository tests cover direct/nested ID and status mutations, which M0 intentionally does not expose as public editing routes.
 
@@ -59,9 +69,9 @@ For the two-coach manual check: sign in separately as both seeded coaches; each 
 - The `coach` schema must remain excluded from Supabase's exposed Data API schemas. There are no grants for `anon`/`authenticated`; browser JWTs cannot bypass application-session revocation.
 - Managed Supabase authentication verifies credentials. Its temporary login session is revoked immediately, then an independent HttpOnly application session is issued for at most seven days, with 24-hour idle expiry. Sign-out deletes the app session server-side. A password reset/provider account freeze currently also requires an operator to delete that coach's `coach.sessions` rows; automated provider lifecycle integration is a pre-pilot requirement.
 - Login quotas are shared through PostgreSQL (10 attempts/email and 100 total/15 minutes). Configure trusted-edge per-IP limits and provider abuse controls before public use. Expired session and old login-limit rows should be purged daily by an operator job; do not log row contents.
-- Runtime credentials are intentionally least-privileged: read foundation records and update selected fields only. M1 must add new grants and policies with its migrations. Session and login-limit storage is server-only infrastructure, not tenant content accessible through the browser.
+- Runtime credentials are intentionally least-privileged: M1 grants bounded setup writes under owner policies, immutable report inserts and synthetic-only program deletion. The runtime cannot label a program synthetic. Setup saves are limited to 60 per account per ten minutes. Session and login-limit storage is server-only infrastructure, not tenant content accessible through the browser.
 - AI fixture actions return typed Unknown drafts with no evidence or active-plan mutations. Action-specific generated plan schemas belong to M2–M7; these placeholders do not claim to be useful plans.
-- No real youth data until the original privacy/vendor/retention/coaching and security launch gates are resolved. M0 does not implement privacy deletion or operational backups.
+- No real youth data until the original privacy/vendor/retention/coaching and security launch gates are resolved. M1 verifies synthetic live-data cascades; production privacy deletion and operational backups remain future launch gates.
 
 Next milestone: **M1 — coach/team onboarding and assessment inputs**.
 

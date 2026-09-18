@@ -73,14 +73,14 @@ describe.skipIf(process.env.RUN_HOSTED_DB_TESTS !== "1")(
       for (const [index, token] of tokens.entries()) {
         const own = fixtureIds[index],
           other = fixtureIds[1 - index];
-        expect(
-          await withSession(database, token, (r) => r.teams()),
-        ).toHaveLength(1);
+        expect(await withSession(database, token, (r) => r.teams())).toEqual([
+          { id: own.team, name: index === 0 ? "Demo Cedar" : "Demo Willow" },
+        ]);
         expect(
           await withSession(database, token, (r) =>
             r.roster(own.team, own.season),
           ),
-        ).toHaveLength(1);
+        ).not.toHaveLength(0);
         await expect(
           withSession(database, token, (r) => r.team(other.team)),
         ).rejects.toThrow("unavailable");

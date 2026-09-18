@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Unauthorized } from "../../domain/errors";
 import { database } from "../../server/db/runtime";
@@ -19,7 +20,8 @@ export default async function Today() {
     <main id="main">
       <div className="toolbar">
         <nav aria-label="Main">
-          <span aria-current="page">Today</span>
+          <span aria-current="page">Today</span>{" "}
+          <Link href="/setup">Team settings</Link>
         </nav>
         <form action={signOut}>
           <button className="secondary">Sign out</button>
@@ -35,8 +37,11 @@ export default async function Today() {
           <p>
             {teams.length
               ? "Your team workspace is connected and private to your account."
-              : "Your account is ready. Team and season setup are coming in the next milestone."}
+              : "Your account is ready. Add your team and season to get started."}
           </p>
+          <Link className="button-link" href="/setup">
+            {teams.length ? "Set up or edit your season" : "Create your team"}
+          </Link>
           <div className="empty">
             <span aria-hidden="true">◷</span>
             <h3>No practice scheduled yet</h3>
@@ -66,7 +71,7 @@ export default async function Today() {
             </li>
           </ol>
           <p className="small">
-            Foundation preview · Planning tools are not available yet.
+            Setup preview · Save your team inputs now. Planning tools come next.
           </p>
         </aside>
       </div>

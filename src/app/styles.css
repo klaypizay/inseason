@@ -291,3 +291,106 @@ a {
     background: white;
   }
 }
+
+.setup-layout {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 28px;
+  margin-top: 36px;
+  align-items: start;
+}
+.setup-steps {
+  display: grid;
+  gap: 10px;
+  position: sticky;
+  top: 20px;
+}
+.setup-steps button {
+  text-align: left;
+}
+.setup-card {
+  min-width: 0;
+}
+.setup-card fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.setup-card legend {
+  font-size: 26px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+.field-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 20px;
+}
+select,
+textarea {
+  width: 100%;
+  display: block;
+  min-height: 48px;
+  margin-top: 7px;
+  padding: 12px;
+  border: 1px solid #a4b4aa;
+  border-radius: 7px;
+  background: #fdfefb;
+  color: var(--ink);
+  font: inherit;
+}
+textarea {
+  resize: vertical;
+}
+.row-card {
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  margin: 18px 0;
+}
+.row-card h4 {
+  margin: 0;
+}
+.row-card button {
+  margin-top: 15px;
+}
+.save-bar {
+  border-top: 1px solid var(--line);
+  margin-top: 30px;
+  padding-top: 15px;
+}
+.button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.button-link {
+  display: inline-block;
+  background: var(--ink);
+  color: white;
+  border-radius: 7px;
+  padding: 12px 20px;
+  text-decoration: none;
+}
+.toolbar nav {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+@media (max-width: 760px) {
+  .setup-layout {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+  .setup-steps {
+    position: static;
+    grid-template-columns: 1fr 1fr;
+  }
+  .field-grid {
+    grid-template-columns: 1fr;
+  }
+  .toolbar nav {
+    gap: 10px;
+  }
+}

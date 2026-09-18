@@ -1,3 +1,4 @@
+import { OnboardingRepository } from "./onboarding";
 import { createHash } from "node:crypto";
 import { z } from "zod";
 import { NotFound, Unauthorized } from "../../domain/errors";
@@ -34,23 +35,27 @@ export async function withSession<T>(
 ): Promise<T> {
   if (!token || !/^[a-f0-9]{64}$/.test(token)) throw new Unauthorized();
   return database.transaction(async (q) => {
-    const sessions = await q<{ account_id: string }>(
+    const sessions = await q<{ account_id: string; fresh: boolean }>(
       `update coach.sessions set last_seen_at = now()
       where token_hash = $1 and expires_at > now() and last_seen_at > now() - interval '24 hours'
-      returning account_id`,
+      returning account_id, created_at > now() - interval '10 minutes' as fresh`,
       [digest(token)],
     );
     if (!sessions[0]) throw new Unauthorized();
     const actor = sessions[0].account_id;
     await q("select set_config('coach.actor_id',$1,true)", [actor]);
-    return work(new Repository(q, actor));
+    return work(new Repository(q, actor, sessions[0].fresh));
   });
 }
 class Repository {
   constructor(
     private q: Query,
     private actor: string,
+    private fresh: boolean,
   ) {}
+  onboarding() {
+    return new OnboardingRepository(this.q, this.actor, this.fresh);
+  }
   async teams() {
     return this.q<{ id: string; name: string }>(
       `select t.id,t.name from coach.teams t join coach.programs p on p.id=t.program_id where p.owner_id=$1 order by t.created_at,t.id limit 50`,
