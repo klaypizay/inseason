@@ -1,5 +1,10 @@
 "use client";
-import { useDateFormat, useDateText } from "./preferences-provider";
+import {
+  useDateFormat,
+  useDateText,
+  useTimeFormat,
+} from "./preferences-provider";
+import { TimeInput } from "./time-input";
 import Link from "next/link";
 import { Overlay } from "./overlay";
 import { useEffect, useState, useTransition } from "react";
@@ -15,9 +20,16 @@ import {
   recoverRoadmap,
   saveRoadmap,
 } from "../server/roadmap/actions";
+const historyReasons: Record<string, string> = {
+  "Review generated roadmap": "First outline ready for review",
+  "Coach accepted roadmap": "You chose this roadmap",
+  "Coach edited roadmap": "Your edits saved as a draft",
+  "Calendar change preview": "Proposed schedule changes",
+};
 export function RoadmapEditor({ initial }: { initial: RoadmapView }) {
   const date = useDateFormat();
   const dateText = useDateText();
+  const time = useTimeFormat();
   const [editorOpen, setEditorOpen] = useState(false);
   const [editorTab, setEditorTab] = useState<"week" | "phase">("week");
   const { version: v, today } = initial,
@@ -81,9 +93,9 @@ export function RoadmapEditor({ initial }: { initial: RoadmapView }) {
     <>
       <p className="eyebrow">
         {active
-          ? "ACTIVE ROADMAP"
+          ? "ROADMAP IN USE"
           : v.status === "accepted"
-            ? "ACCEPTED HISTORY"
+            ? "PREVIOUSLY USED ROADMAP"
             : "ROADMAP REVIEW"}{" "}
         · VERSION {v.number}
       </p>
@@ -104,8 +116,8 @@ export function RoadmapEditor({ initial }: { initial: RoadmapView }) {
           : dirty
             ? "Unsaved changes — save before leaving this page."
             : active
-              ? "This accepted version is saved and active."
-              : "Saved version. Review each week, then accept to use this roadmap for weekly planning."}
+              ? "You’re using this roadmap to guide your practice plans. You can still adjust future weeks as your team develops."
+              : "Review what your team will work on each week. Edit anything that doesn’t fit, then choose Use this roadmap to begin planning practices."}
       </p>
       {error && (
         <p role="alert" className="error">
@@ -114,7 +126,7 @@ export function RoadmapEditor({ initial }: { initial: RoadmapView }) {
       )}
       {!editable && (
         <p className="error">
-          This is a historical or stale review.{" "}
+          This copy is from an earlier review or uses older team settings.{" "}
           <Link
             href={
               "/roadmaps/" + (initial.reviewId ?? initial.currentId ?? v.id)
@@ -122,43 +134,55 @@ export function RoadmapEditor({ initial }: { initial: RoadmapView }) {
           >
             Open the latest review
           </Link>{" "}
-          or recover its teaching content below.
+          or reuse its teaching ideas from Saved versions below.
         </p>
       )}
       {!!initial.conflicts.length && (
         <section className="card draft-section" role="alert">
-          <h2>Resolve before acceptance</h2>
+          <h2>Check these dates before using this roadmap</h2>
           <ul>
             {initial.conflicts.map((x, i) => (
               <li key={i}>{dateText(x)}</li>
             ))}
           </ul>
           <p>
-            Open calendar review below to reschedule or cancel affected
-            sessions, reassign teaching weeks, or individually edit fixed
-            events. Nothing has moved in the active plan.
+            Open Change dates or practice availability below to move or cancel
+            affected practices, adjust weeks or edit events. The schedule you’re
+            currently using has not changed.
           </p>
         </section>
       )}
       {editable && (
         <div className="save-bar button-row review-actions">
           <p>
-            {dirty ? "Unsaved review edits" : "Review each week, then accept"}
+            {dirty
+              ? "Unsaved review edits"
+              : active
+                ? "Your roadmap is in use."
+                : "Scan, adjust, then use your roadmap"}
           </p>
-          <button
-            disabled={pending || calendar !== null}
-            onClick={() => save(false)}
-          >
-            Save draft edits
-          </button>
-          <button
-            disabled={
-              pending || calendar !== null || initial.conflicts.length > 0
-            }
-            onClick={() => save(true)}
-          >
-            Accept roadmap
-          </button>
+          {active && !dirty ? (
+            <Link className="button-link" href={"/weeks/" + week.id}>
+              Plan practice →
+            </Link>
+          ) : (
+            <>
+              <button
+                disabled={pending || calendar !== null}
+                onClick={() => save(false)}
+              >
+                Save draft edits
+              </button>
+              <button
+                disabled={
+                  pending || calendar !== null || initial.conflicts.length > 0
+                }
+                onClick={() => save(true)}
+              >
+                Use this roadmap
+              </button>
+            </>
+          )}
         </div>
       )}
       <section className="week-board" aria-labelledby="week-board-title">
@@ -166,8 +190,10 @@ export function RoadmapEditor({ initial }: { initial: RoadmapView }) {
           Your season at a glance
         </h2>
         <p className="small">
-          Review each phase and week before accepting. Select a card to edit in
-          a popup without losing your place. Cards reflect your unsaved edits.
+          Each card shows what to teach and a sign of progress to watch for.
+          Select any week to edit it without losing your place. Choose Use this
+          roadmap when the outline fits your team; you don’t need to open every
+          card.
         </p>
         {p.phases.map((group) => (
           <section className="week-phase" key={group.id}>
@@ -213,7 +239,7 @@ export function RoadmapEditor({ initial }: { initial: RoadmapView }) {
                       </span>
                       <span className="week-emphasis">{draft.emphasis}</span>
                       <span className="week-checkpoint">
-                        <strong>Checkpoint</strong>
+                        <strong>What to look for</strong>
                         {draft.checkpoint}
                       </span>
                       <span className="week-open">
@@ -229,7 +255,7 @@ export function RoadmapEditor({ initial }: { initial: RoadmapView }) {
         ))}
       </section>
       <section className="card draft-section">
-        <h2>What comes next</h2>
+        <h2>Plan a practice for your selected week</h2>
         <p>
           <strong>
             {date(week.start)} to {date(week.end)}:
@@ -240,18 +266,24 @@ export function RoadmapEditor({ initial }: { initial: RoadmapView }) {
         <p>Why: {phase.rationale}</p>
         {active && (
           <Link className="button-link" href={"/weeks/" + week.id}>
-            Plan this week
+            Prepare this week’s practice
           </Link>
         )}
         <p className="small">
-          Choose a week above, then detail its teaching objectives and practice
-          assignments.
+          Choose a week above. Once you’re using this roadmap, we can turn that
+          week’s priorities into timed activities and instructions for each
+          scheduled practice.
         </p>
       </section>
-      <section className="card draft-section">
-        <h2>Why this plan?</h2>
+      <details className="card draft-section planning-disclosure">
+        <summary>Why this roadmap fits your team</summary>
+        <p>
+          These notes explain the suggested teaching order and the details to
+          confirm. Edit them if your understanding of the team changes. Saving
+          these notes alone does not rewrite the weekly priorities.
+        </p>
         <label>
-          Roadmap explanation
+          Why these priorities and this order?
           <textarea
             maxLength={600}
             disabled={!editable || calendar !== null || pending}
@@ -260,7 +292,7 @@ export function RoadmapEditor({ initial }: { initial: RoadmapView }) {
           />
         </label>
         <label>
-          Planning assumptions (one per line, up to six)
+          Things to confirm (one per line, up to six)
           <textarea
             disabled={!editable || calendar !== null || pending}
             value={edits.assumptions.join("\n")}
@@ -273,23 +305,25 @@ export function RoadmapEditor({ initial }: { initial: RoadmapView }) {
           />
         </label>
         {v.generationId && (
-          <Link href={"/drafts/" + v.generationId}>
-            Read the original generated draft and source context
+          <Link href={"/drafts/" + v.generationId + "?source=1"}>
+            See the original outline and the team notes behind it
           </Link>
         )}
         <p className="small">
-          Edited teaching text is a coach recommendation, not a new observation
-          about a player.
+          Use what you see at practice to check whether these suggestions fit.
+          Your plan describes what to teach; it doesn’t measure what players can
+          already do.
         </p>
-      </section>
+      </details>
       <Overlay
         open={editorOpen}
         onClose={() => setEditorOpen(false)}
         title={`Review week ${p.weeks.indexOf(week) + 1}`}
       >
         <p className="small">
-          Changes stay in this review when you close. Save draft edits or accept
-          the roadmap to save them.
+          Closing this window keeps your edits on this page. Choose Save draft
+          edits to save them for later, or Use this roadmap to make the updated
+          outline the one your practice planning follows.
         </p>
         <div className="button-row">
           <button
@@ -405,7 +439,7 @@ export function RoadmapEditor({ initial }: { initial: RoadmapView }) {
                       />
                     </label>
                     <label>
-                      Observable success criteria
+                      What progress would look like
                       <textarea
                         maxLength={600}
                         disabled={
@@ -440,7 +474,7 @@ export function RoadmapEditor({ initial }: { initial: RoadmapView }) {
                           })
                         }
                       />
-                      Lock goal text and success criteria
+                      Lock this goal and its progress check
                     </label>
                   </fieldset>
                 );
@@ -454,12 +488,13 @@ export function RoadmapEditor({ initial }: { initial: RoadmapView }) {
               {date(week.end)}
             </h3>
             <p className="small">
-              A lock protects teaching content. Date moves still require
-              calendar review. Save and accept an unlock before editing
-              protected text in an active plan.
+              Lock a week to keep its teaching focus and progress check from
+              changing. To edit a locked week in the roadmap you use, uncheck
+              the lock and choose Use this roadmap first. Calendar changes are
+              reviewed separately.
             </p>
             <label>
-              Weekly emphasis
+              What to teach this week
               <textarea
                 maxLength={600}
                 disabled={
@@ -481,7 +516,7 @@ export function RoadmapEditor({ initial }: { initial: RoadmapView }) {
               />
             </label>
             <label>
-              Weekly checkpoint
+              What progress to look for this week
               <textarea
                 maxLength={600}
                 disabled={
@@ -523,22 +558,23 @@ export function RoadmapEditor({ initial }: { initial: RoadmapView }) {
                   })
                 }
               />
-              Lock this week&apos;s teaching content
+              Lock this week&apos;s focus and progress check
             </label>
             <h3>This week&apos;s calendar</h3>
             {sessions.length ? (
               <ul>
                 {sessions.map((s) => (
                   <li key={s.id}>
-                    {date(s.date)} · {s.time} · {s.minutes} minutes · {s.status}
-                    {s.override ? " · coach override: " + s.override : ""}
+                    {date(s.date)} · {time(s.time)} · {s.minutes} minutes ·{" "}
+                    {s.status}
+                    {s.override ? " · schedule note: " + s.override : ""}
                   </li>
                 ))}
               </ul>
             ) : (
               <p>
-                No team practice this week. Rest or competition does not imply
-                an extra practice.
+                No practice is scheduled this week. The weekly focus can still
+                help you notice progress during games.
               </p>
             )}
             {p.events
@@ -557,12 +593,16 @@ export function RoadmapEditor({ initial }: { initial: RoadmapView }) {
         </button>
       </Overlay>
       {editable && (
-        <section className="card draft-section">
-          <h2 id="calendar-review">Review calendar changes</h2>
+        <details
+          className="card draft-section planning-disclosure"
+          id="calendar-review"
+        >
+          <summary>Change dates or practice availability</summary>
           <p>
-            Preview future moves before accepting. Past/completed sessions stay
-            fixed. Games and tournaments keep their dates unless you edit them
-            individually. Save teaching edits before opening this review.
+            See how a date change affects future weeks and practices before
+            using the new schedule. Past and completed practices stay in place.
+            Games and tournaments keep their dates unless you edit them here.
+            Save any teaching edits before starting a date preview.
           </p>
           <div className="field-grid">
             <label>
@@ -591,7 +631,7 @@ export function RoadmapEditor({ initial }: { initial: RoadmapView }) {
               }
             >
               <option value="shift">
-                Shift eligible future plan dates by the same interval
+                Move future weeks and practices by the same number of days
               </option>
               <option value="keep">Keep existing plan dates</option>
             </select>
@@ -621,15 +661,16 @@ export function RoadmapEditor({ initial }: { initial: RoadmapView }) {
           {calendar && (
             <div>
               <p role="status">
-                Proposed changes only. Review each affected item, then save this
-                preview. Acceptance is a separate step.
+                This is a preview. Check the affected weeks and practices, then
+                choose Save calendar preview. Your current schedule changes only
+                when you choose Use this roadmap on the saved preview.
               </p>
               <details>
-                <summary>Regular availability effective dates</summary>
+                <summary>When your regular practice schedule applies</summary>
                 {calendar.availability.map((r, i) => (
                   <div className="row-card" key={r.id ?? i}>
                     <p>
-                      Weekday {r.weekday} · {r.time} · {r.minutes} minutes
+                      Weekday {r.weekday} · {time(r.time)} · {r.minutes} minutes
                     </p>
                     <label>
                       Available from (blank means season start)
@@ -709,11 +750,11 @@ export function RoadmapEditor({ initial }: { initial: RoadmapView }) {
                 ))}
               </details>
               <details>
-                <summary>Teaching week dates & explicit removals</summary>
+                <summary>Adjust or remove future weeks</summary>
                 <p>
-                  Shortening never silently discards teaching content. Reassign
-                  affected dates or select Remove. Uncovered dates get a new
-                  week marked for coach planning.
+                  If you shorten the season, choose where affected weeks belong
+                  or select Remove. If you add dates, any new weeks will need
+                  teaching priorities before they’re ready to use.
                 </p>
                 {calendar.weeks.map((x, i) => {
                   const old = p.weeks.find((w) => w.id === x.id)!;
@@ -777,25 +818,25 @@ export function RoadmapEditor({ initial }: { initial: RoadmapView }) {
                             })
                           }
                         />
-                        Explicitly remove this future teaching week
+                        Remove this future week from the new outline
                       </label>
                     </div>
                   );
                 })}
               </details>
               <details>
-                <summary>Session moves, cancellations & overrides</summary>
+                <summary>Move or cancel practices</summary>
                 {calendar.sessions.map((x) => {
                   const old = p.sessions.find((s) => s.id === x.id)!;
                   const fixed = old.date < today || old.status !== "scheduled";
                   return (
                     <fieldset className="row-card" key={x.id} disabled={fixed}>
                       <legend>
-                        {date(old.date)} {old.time} · {old.status}
-                        {fixed ? " · fixed history" : ""}
+                        {date(old.date)} {time(old.time)} · {old.status}
+                        {fixed ? " · saved history, cannot move" : ""}
                       </legend>
                       <label>
-                        Session date
+                        Practice date
                         <input
                           type="date"
                           value={x.date}
@@ -811,25 +852,21 @@ export function RoadmapEditor({ initial }: { initial: RoadmapView }) {
                           }
                         />
                       </label>
+                      <TimeInput
+                        label="Practice start time"
+                        required
+                        value={x.time}
+                        onChange={(value) =>
+                          changeCalendar({
+                            ...calendar,
+                            sessions: calendar.sessions.map((y) =>
+                              y.id === x.id ? { ...y, time: value } : y,
+                            ),
+                          })
+                        }
+                      />
                       <label>
-                        Session time
-                        <input
-                          type="time"
-                          value={x.time}
-                          onChange={(e) =>
-                            changeCalendar({
-                              ...calendar,
-                              sessions: calendar.sessions.map((y) =>
-                                y.id === x.id
-                                  ? { ...y, time: e.target.value }
-                                  : y,
-                              ),
-                            })
-                          }
-                        />
-                      </label>
-                      <label>
-                        Outside regular availability? Explain the coach override
+                        Outside your usual practice schedule? Add a reason
                         <input
                           maxLength={200}
                           value={x.override}
@@ -860,7 +897,7 @@ export function RoadmapEditor({ initial }: { initial: RoadmapView }) {
                             })
                           }
                         />
-                        Cancel this session (keep history)
+                        Cancel this practice (keep its history)
                       </label>
                     </fieldset>
                   );
@@ -869,8 +906,8 @@ export function RoadmapEditor({ initial }: { initial: RoadmapView }) {
               <details>
                 <summary>Fixed games, tournaments & unavailable dates</summary>
                 <p>
-                  These dates do not shift automatically. Changes below
-                  explicitly edit the selected event.
+                  These events keep their dates when you move the season. Edit
+                  an event here only if its date or details have changed.
                 </p>
                 {calendar.events.map((x) => (
                   <fieldset className="row-card" key={x.id}>
@@ -947,40 +984,30 @@ export function RoadmapEditor({ initial }: { initial: RoadmapView }) {
                         }
                       />
                     </label>
-                    <label>
-                      Event start time (blank for all day)
-                      <input
-                        type="time"
-                        value={x.time}
-                        onChange={(e) =>
-                          changeCalendar({
-                            ...calendar,
-                            events: calendar.events.map((y) =>
-                              y.id === x.id
-                                ? { ...y, time: e.target.value }
-                                : y,
-                            ),
-                          })
-                        }
-                      />
-                    </label>
-                    <label>
-                      Event end time
-                      <input
-                        type="time"
-                        value={x.endTime}
-                        onChange={(e) =>
-                          changeCalendar({
-                            ...calendar,
-                            events: calendar.events.map((y) =>
-                              y.id === x.id
-                                ? { ...y, endTime: e.target.value }
-                                : y,
-                            ),
-                          })
-                        }
-                      />
-                    </label>
+                    <TimeInput
+                      label="Event start time (blank for all day)"
+                      value={x.time}
+                      onChange={(value) =>
+                        changeCalendar({
+                          ...calendar,
+                          events: calendar.events.map((y) =>
+                            y.id === x.id ? { ...y, time: value } : y,
+                          ),
+                        })
+                      }
+                    />
+                    <TimeInput
+                      label="Event end time"
+                      value={x.endTime}
+                      onChange={(value) =>
+                        changeCalendar({
+                          ...calendar,
+                          events: calendar.events.map((y) =>
+                            y.id === x.id ? { ...y, endTime: value } : y,
+                          ),
+                        })
+                      }
+                    />
                     <label className="check">
                       <input
                         type="checkbox"
@@ -1060,14 +1087,15 @@ export function RoadmapEditor({ initial }: { initial: RoadmapView }) {
               </div>
             </div>
           )}
-        </section>
+        </details>
       )}
-      <section className="card draft-section">
-        <h2>Version history</h2>
+      <details className="card draft-section planning-disclosure">
+        <summary>Saved versions & reuse an earlier plan</summary>
         <p>
-          Recovery creates a new review using current dates and events. Locked
-          content and past weeks stay protected. It never erases an accepted
-          version.
+          Reuse teaching ideas from this saved version in a new draft with your
+          current dates and events. Locked content and past weeks stay
+          protected. Your saved versions remain available, and your current
+          roadmap stays in use until you choose the new one.
         </p>
         <button
           className="secondary"
@@ -1083,18 +1111,23 @@ export function RoadmapEditor({ initial }: { initial: RoadmapView }) {
             )
           }
         >
-          Recover version {v.number} as a new draft
+          Reuse version {v.number} as a new draft
         </button>
         <ul>
           {initial.history.map((h) => (
             <li key={h.id}>
               <Link href={"/roadmaps/" + h.id}>Version {h.number}</Link> ·{" "}
-              {h.status} · {h.reason}
-              {h.id === initial.currentId ? " · active" : ""}
+              {h.status === "accepted" ? "Chosen for coaching" : "Draft"} ·{" "}
+              {historyReasons[h.reason] ??
+                h.reason.replace(
+                  "Recovered teaching content from version",
+                  "Teaching ideas reused from version",
+                )}
+              {h.id === initial.currentId ? " · In use" : ""}
             </li>
           ))}
         </ul>
-      </section>
+      </details>
     </>
   );
 }

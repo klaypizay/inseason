@@ -1,4 +1,6 @@
 "use client";
+import { OpenRoadmapReview } from "./open-roadmap-review";
+import { AIGenerationOverlay } from "./ai-generation-overlay";
 import { useDateFormat } from "./preferences-provider";
 import { ReviewRoadmapButton } from "./review-roadmap-button";
 import Link from "next/link";
@@ -10,21 +12,28 @@ const errors: Record<string, string> = {
   stale_context:
     "Team settings changed while this draft was being prepared. Generate a fresh draft.",
   invalid_output:
-    "The response was incomplete or malformed. No draft was saved.",
+    "We couldn’t complete a usable draft. Your saved plans are unchanged. Return to Season roadmap and try again.",
   invalid_evidence:
-    "The response referenced unsupported evidence. No draft was saved.",
+    "The draft included claims we couldn’t connect to your team notes, so we didn’t save it. Your existing plans are unchanged. Please try again.",
   invalid_calendar:
-    "The response did not cover every phase and week. No draft was saved.",
+    "The draft missed part of your season schedule, so we didn’t save it. Your existing plans are unchanged. Please try again.",
   interrupted: "This attempt was interrupted. You can start a new attempt.",
-  timeout: "The provider took too long. You can retry.",
+  timeout:
+    "Preparing the draft took too long. Your saved plans are unchanged. Please try again.",
   refused:
-    "The provider could not fulfill this request. Review your inputs before retrying.",
+    "We couldn’t create a draft from this request. Check your team notes, then try again.",
   provider_auth:
-    "The AI connection needs attention. Your saved inputs and drafts are available.",
+    "We can’t connect to the planning service right now. You can still open your saved plans. Please try again later.",
   provider_limit:
-    "The AI provider is temporarily limiting requests. Try again later.",
+    "The planning service is busy. Your saved plans are available. Please try again later.",
 };
-export function DraftView({ initial }: { initial: GenerationView }) {
+export function DraftView({
+  initial,
+  showSource = false,
+}: {
+  initial: GenerationView;
+  showSource?: boolean;
+}) {
   const date = useDateFormat();
   const [view, setView] = useState(initial),
     [error, setError] = useState("");
@@ -67,7 +76,7 @@ export function DraftView({ initial }: { initial: GenerationView }) {
           const source = sources.find((s) => s.id === id);
           return (
             <li key={id}>
-              Coach report ·{" "}
+              Based on your note ·{" "}
               {reportFields[source?.field as ReportField] ?? "Source"}:{" "}
               {source?.value} ({date(source?.reportedAt)})
             </li>
@@ -76,20 +85,45 @@ export function DraftView({ initial }: { initial: GenerationView }) {
       </ul>
     ) : (
       <p className="small">
-        No team evidence claimed; treat this as a question or general
-        recommendation.
+        A general suggestion to consider. We don’t yet have team notes to
+        confirm whether it fits your players.
       </p>
     );
+  if (
+    !showSource &&
+    view.status === "succeeded" &&
+    payload?.action === "draftRoadmap" &&
+    view.contextVersion === view.currentContextVersion
+  )
+    return <OpenRoadmapReview id={view.id} />;
   return (
     <>
-      <p className="eyebrow">DRAFT · COACH REVIEW REQUIRED</p>
+      <AIGenerationOverlay
+        active={busy && !error}
+        title={
+          view.action === "assessSeason"
+            ? "Preparing your team assessment…"
+            : "Building your season roadmap…"
+        }
+        description={
+          view.action === "assessSeason"
+            ? "Turning your team notes into clear priorities and suggestions."
+            : "Bringing your team’s goals and schedule into a week-by-week plan."
+        }
+      />
+      <p className="eyebrow">
+        {payload ? "SAVED FOR YOUR REVIEW" : "YOUR SEASON PLAN"}
+      </p>
       <h1>
         {view.action === "assessSeason"
-          ? "Season assessment"
+          ? "Your team assessment"
           : "Season roadmap"}
       </h1>
       {view.provider === "fixture" && (
-        <p className="small">Demo example · not a live AI assessment.</p>
+        <p className="small">
+          Prewritten example to show what you’ll receive. It is not a
+          personalized assessment of your team.
+        </p>
       )}
       {busy && (
         <section className="card" role="status">
@@ -97,7 +131,7 @@ export function DraftView({ initial }: { initial: GenerationView }) {
           <p>
             {view.attempts > 1
               ? "Retry " + (view.attempts - 1) + " of at most 2."
-              : "Checking your context and preparing teaching suggestions."}{" "}
+              : "Using your team details, goals and schedule to prepare suggestions for you."}{" "}
             You can refresh this page to check progress.
           </p>
         </section>
@@ -123,14 +157,15 @@ export function DraftView({ initial }: { initial: GenerationView }) {
         <>
           {view.contextVersion !== view.currentContextVersion && (
             <p className="error">
-              Settings have changed since this draft. Keep it as history and
-              generate a fresh draft before review.
+              Your team setup has changed since this was created. This copy is
+              still saved; create a fresh draft from Season roadmap to use your
+              updated details.
             </p>
           )}
           <p>
             {payload.action === "assessSeason"
-              ? "This assessment is advice about your team’s needs. It does not activate a roadmap or schedule practices. Return to Season to create a roadmap when you are ready."
-              : "This is the original generated suggestion. Review and edit its weeks before accepting a version as your active roadmap. Opening this draft does not change the plan you currently use."}
+              ? "Here are possible strengths, areas to work on and goals based on the notes you’ve shared. Use these suggestions to decide what belongs in your season roadmap. They reflect your reports, not a direct evaluation of your players, and won’t change your plans automatically."
+              : "This is the first outline we created from your team setup. Open Review & edit roadmap to adjust any week, then choose Use this roadmap when it fits your team. Your current plan stays in place until you make that choice."}
           </p>
           {payload.action === "assessSeason"
             ? (() => {
@@ -138,20 +173,20 @@ export function DraftView({ initial }: { initial: GenerationView }) {
                 return (
                   <>
                     <section className="card">
-                      <h2>What you reported</h2>
+                      <h2>The team notes we used</h2>
                       <p className="small">
-                        Known means recorded from you, not independently
-                        verified.
+                        These are the details you shared in Team setup. Update
+                        them as you get to know your players so future
+                        suggestions stay relevant.
                       </p>
                       {sources.map((s) => (
                         <div className="source-row" key={s.id}>
                           <h3>
                             {reportFields[s.field as ReportField] ?? s.field}
                           </h3>
-                          <p>{s.value ?? "Unknown — not reported yet."}</p>
+                          <p>{s.value ?? "You haven’t added this yet."}</p>
                           <p className="small">
-                            {s.confidence} ·{" "}
-                            {s.value ? "Coach report" : "Unanswered input"} ·{" "}
+                            {s.value ? "Shared by you" : "Not added yet"} ·{" "}
                             {date(s.reportedAt)}
                           </p>
                         </div>
@@ -161,15 +196,22 @@ export function DraftView({ initial }: { initial: GenerationView }) {
                       <section className="card draft-section" key={key}>
                         <h2>
                           {key === "strengths"
-                            ? "Possible strengths"
-                            : "Gaps to explore"}
+                            ? "Strengths to build on"
+                            : "Areas to work on"}
                         </h2>
                         {!a[key].length && (
-                          <p>Unknown. More coach observations are needed.</p>
+                          <p>
+                            Add a few observations in Team setup, then run
+                            another assessment for more specific suggestions.
+                          </p>
                         )}
                         {a[key].map((c, i) => (
                           <div className="source-row" key={i}>
-                            <strong>{c.confidence}</strong>
+                            <strong>
+                              {c.confidence === "Likely"
+                                ? "Suggested by your notes · check at practice"
+                                : "Something to explore at practice"}
+                            </strong>
                             <p>{c.text}</p>
                             {evidence(c.evidenceIds)}
                           </div>
@@ -177,7 +219,7 @@ export function DraftView({ initial }: { initial: GenerationView }) {
                       </section>
                     ))}
                     <section className="card draft-section">
-                      <h2>Proposed season goals</h2>
+                      <h2>Goals to consider for your season</h2>
                       {a.goals.map((g, i) => (
                         <div className="source-row" key={i}>
                           <h3>{g.description}</h3>
@@ -187,16 +229,22 @@ export function DraftView({ initial }: { initial: GenerationView }) {
                       ))}
                     </section>
                     <section className="card draft-section">
-                      <h2>Open questions</h2>
+                      <h2>What to learn about your team next</h2>
                       <ul>
                         {a.questions.map((q) => (
                           <li key={q}>{q}</li>
                         ))}
                       </ul>
-                      <h3>Assumptions</h3>
+                      <h3>Things to confirm before planning</h3>
                       <ul>
                         {a.assumptions.map((q) => (
-                          <li key={q}>{q}</li>
+                          <li key={q}>
+                            {view.provider === "fixture" &&
+                            q ===
+                              "This fixture offers general teaching suggestions, not a measured assessment."
+                              ? "This prewritten example offers general teaching ideas. Check what fits your players at practice."
+                              : q}
+                          </li>
                         ))}
                       </ul>
                     </section>
@@ -210,21 +258,23 @@ export function DraftView({ initial }: { initial: GenerationView }) {
                     <details className="card roadmap-explanation">
                       <summary>Why this roadmap?</summary>
                       <p>{r.rationale}</p>
-                      <h3>Assumptions</h3>
+                      <h3>Things to confirm about your team</h3>
                       <ul>
                         {r.assumptions.map((q) => (
                           <li key={q}>{q}</li>
                         ))}
                       </ul>
                       <p className="small">
-                        Dates are inclusive in {payload.context.season.timezone}
-                        . Short boundary weeks stay within their phase.
+                        Dates include the first and last day shown and use{" "}
+                        {payload.context.season.timezone}. A week may be shorter
+                        at the start or end of a season phase.
                       </p>
                     </details>
                     <h2 className="board-title">Your season at a glance</h2>
                     <p className="small">
                       Read weeks left to right, grouped by phase. Expand a card
-                      for its full teaching notes and sources.
+                      for its teaching notes and the team information behind
+                      them.
                     </p>
                     {payload.context.phases.map((p) => {
                       const phase = r.phases.find((x) => x.phaseId === p.id)!;
@@ -235,7 +285,9 @@ export function DraftView({ initial }: { initial: GenerationView }) {
                             {date(p.end)}
                           </p>
                           <details className="phase-notes">
-                            <summary>Phase priorities & rationale</summary>
+                            <summary>
+                              Goals for this part of the season & why
+                            </summary>
                             <p>{phase.rationale}</p>
                             {phase.goals.map((g, i) => (
                               <div className="source-row" key={i}>
@@ -265,14 +317,16 @@ export function DraftView({ initial }: { initial: GenerationView }) {
                                       {week.emphasis}
                                     </p>
                                     <p className="week-checkpoint">
-                                      <strong>Checkpoint</strong>
+                                      <strong>What to look for</strong>
                                       {week.checkpoint}
                                     </p>
                                     <details className="week-details">
-                                      <summary>Full notes & sources</summary>
+                                      <summary>
+                                        Teaching notes & your team reports
+                                      </summary>
                                       <p>{week.emphasis}</p>
                                       <p>
-                                        <strong>Checkpoint:</strong>{" "}
+                                        <strong>What to look for:</strong>{" "}
                                         {week.checkpoint}
                                       </p>
                                       {evidence(week.evidenceIds)}
@@ -288,16 +342,17 @@ export function DraftView({ initial }: { initial: GenerationView }) {
                 );
               })()}
           <section className="card draft-section">
-            <h2>Keep the coach in control</h2>
+            <h2>Your next step</h2>
             <p>
-              Review the roadmap, edit its teaching priorities, and accept it
-              when you are ready.
+              {payload.action === "assessSeason"
+                ? "Choose the suggestions that fit what you see at practice. Add them to your goals or team notes in Team setup, then create a roadmap from those updated details. If you already use a roadmap, open it from the sidebar to edit future weeks."
+                : "Review the weekly teaching priorities and edit anything that doesn’t fit. Choose Use this roadmap to make it the outline for your practice planning."}
             </p>
             {payload.action === "draftRoadmap" && (
               <ReviewRoadmapButton generationId={view.id} />
             )}
-            <Link href="/setup">Edit team inputs</Link> ·{" "}
-            <Link href="/season">Generate another draft</Link>
+            <Link href="/setup">Update team notes & goals</Link> ·{" "}
+            <Link href="/season">Return to season planning</Link>
           </section>
         </>
       )}

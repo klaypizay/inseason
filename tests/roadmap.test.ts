@@ -393,7 +393,7 @@ it("supports resolved first-review shortening and requires calendar review after
         phases: settings.phases.map((x) => ({ ...x, end: "2027-03-22" })),
       }),
     ),
-  ).rejects.toThrow("calendar preview");
+  ).rejects.toThrow("Change dates or practice availability");
   await withSession(db, f.token, (r) =>
     r.onboarding().save({
       ...settings,

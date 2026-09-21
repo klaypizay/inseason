@@ -12,6 +12,8 @@ import {
   defaultPreferences,
   formatDate,
   formatDateText,
+  formatTime,
+  formatTimeText,
   type Preferences,
 } from "../domain/preferences";
 import {
@@ -48,7 +50,8 @@ export function PreferencesProvider({
     if (
       setupDirty ||
       draft.displayName !== preferences.displayName ||
-      draft.dateFormat !== preferences.dateFormat
+      draft.dateFormat !== preferences.dateFormat ||
+      draft.timeFormat !== preferences.timeFormat
     ) {
       setConfirmClose(true);
       return;
@@ -152,7 +155,10 @@ export function PreferencesProvider({
           aria-labelledby={"settings-tab-" + tab}
         >
           <div hidden={tab !== "coach"}>
-            <p>Personalize how your coaching workspace looks.</p>
+            <p>
+              Choose how your name, dates and times appear, then tell us how
+              much coaching guidance you’d like in your plans.
+            </p>
             <form
               onSubmit={(e) => {
                 e.preventDefault();
@@ -205,6 +211,26 @@ export function PreferencesProvider({
                 Preview: {formatDate("2027-03-18", draft.dateFormat)}. Calendar
                 pickers use your browser&apos;s date format.
               </p>
+              <label>
+                Time format
+                <select
+                  disabled={pending}
+                  value={draft.timeFormat}
+                  onChange={(e) =>
+                    setDraft({
+                      ...draft,
+                      timeFormat: e.target.value as Preferences["timeFormat"],
+                    })
+                  }
+                >
+                  <option value="12-hour">12-hour (6:00 PM)</option>
+                  <option value="24-hour">24-hour (18:00)</option>
+                </select>
+              </label>
+              <p className="small">
+                Used in your schedules, practice plans and printed plans.
+                Changing the format keeps your scheduled times the same.
+              </p>
               <button disabled={pending}>
                 {pending ? "Saving…" : "Save settings"}
               </button>
@@ -245,7 +271,22 @@ export function useDateFormat() {
 }
 export function useDateText() {
   const { preferences } = useContext(Context);
-  return (value: string) => formatDateText(value, preferences.dateFormat);
+  return (value: string) =>
+    formatTimeText(
+      formatDateText(value, preferences.dateFormat),
+      preferences.timeFormat,
+    );
+}
+export function useTimePreference() {
+  return useContext(Context).preferences.timeFormat;
+}
+export function useTimeFormat() {
+  const format = useTimePreference();
+  return (value: string | null | undefined) => formatTime(value, format);
+}
+export function DisplayTime({ value }: { value: string }) {
+  const time = useTimeFormat();
+  return <>{time(value)}</>;
 }
 export function DisplayDate({ value }: { value: string }) {
   const date = useDateFormat();

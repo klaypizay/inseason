@@ -23,14 +23,14 @@ test("setup resumes, preserves Unknowns and rejects invalid duration before comp
   await page.getByRole("checkbox").check();
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page).toHaveURL(/today$/);
-  await page.getByRole("link", { name: "Team settings" }).click();
+  await page.goto("/setup");
   await page
     .getByLabel("Coaching experience", { exact: true })
     .selectOption("First year");
   await page
-    .getByLabel("Guidance level", { exact: true })
+    .getByLabel("How much coaching guidance would help?", { exact: true })
     .selectOption("Step-by-step explanations");
-  await page.getByLabel("Age band", { exact: true }).selectOption("13U");
+  await page.getByLabel("Age group", { exact: true }).selectOption("13U");
   await page
     .getByLabel("Approximate skill level", { exact: true })
     .selectOption("");
@@ -48,15 +48,15 @@ test("setup resumes, preserves Unknowns and rejects invalid duration before comp
   await page.getByRole("button", { name: "2. Season", exact: true }).click();
   await page.getByLabel("Season start", { exact: true }).fill("2027-01-04");
   await page
-    .getByLabel("Season end (inclusive)", { exact: true })
+    .getByLabel("Last day of the season", { exact: true })
     .fill("2027-03-28");
   if (
     await page
-      .getByRole("button", { name: "Approve one in-season phase" })
+      .getByRole("button", { name: "Use one phase for the whole season" })
       .count()
   )
     await page
-      .getByRole("button", { name: "Approve one in-season phase" })
+      .getByRole("button", { name: "Use one phase for the whole season" })
       .click();
   await page
     .getByRole("button", { name: "Save & continue", exact: true })
@@ -110,7 +110,7 @@ test("setup resumes, preserves Unknowns and rejects invalid duration before comp
     .getByRole("button", { name: "Save & continue", exact: true })
     .click();
   await expect(page.getByRole("status")).toContainText("Saved.", savedTimeout);
-  while ((await page.getByLabel(/alias \(optional\)/).count()) < 9)
+  while ((await page.getByLabel(/nickname \(optional\)/).count()) < 9)
     await page.getByRole("button", { name: "Add player", exact: true }).click();
   await page
     .getByRole("button", { name: "Save & continue", exact: true })
@@ -121,13 +121,15 @@ test("setup resumes, preserves Unknowns and rejects invalid duration before comp
     .fill("How should I teach spacing?");
   await page.getByRole("button", { name: "Finish setup", exact: true }).click();
   await expect(page.getByRole("status")).toContainText(
-    "Setup complete.",
+    "Setup saved.",
     savedTimeout,
   );
   await page.reload();
   await expect(page.getByRole("status")).toContainText("Setup complete");
-  await page.getByRole("button", { name: "5. Players", exact: true }).click();
-  await expect(page.getByLabel(/alias \(optional\)/)).toHaveCount(9);
+  await page
+    .getByRole("button", { name: "5. Players (optional)", exact: true })
+    .click();
+  await expect(page.getByLabel(/nickname \(optional\)/)).toHaveCount(9);
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,

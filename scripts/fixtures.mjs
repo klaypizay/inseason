@@ -32,7 +32,7 @@ export async function seedFixtures(
     );
     await q(
       "insert into coach.seasons(id,program_id,team_id,title,created_by) values($1,$2,$3,$4,$5) on conflict do nothing",
-      [f.season, f.program, f.team, "Synthetic season", actor],
+      [f.season, f.program, f.team, "Example season", actor],
     );
     await q(
       "insert into coach.players(id,program_id,alias,created_by) values($1,$2,$3,$4) on conflict do nothing",

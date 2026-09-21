@@ -55,6 +55,8 @@ export async function beginWeek(
   expected: string | null,
   roadmap: string,
   request: string,
+  practiceInput?: unknown,
+  draftInput?: unknown,
 ) {
   try {
     const provider = configuredWeekProvider();
@@ -70,6 +72,8 @@ export async function beginWeek(
             provider.name,
             provider.model,
             dailyQuota(),
+            practiceInput,
+            draftInput,
           ),
       ),
     };
@@ -86,6 +90,17 @@ export async function executeWeeklyDraft(id: string) {
       configuredWeekProvider(),
     );
     return { ok: true };
+  } catch (e) {
+    return { error: message(e) };
+  }
+}
+export async function weeklyDraftStatus(id: string) {
+  try {
+    return {
+      status: await withSession(database, await sessionToken(), (r) =>
+        r.week().status(id),
+      ),
+    };
   } catch (e) {
     return { error: message(e) };
   }

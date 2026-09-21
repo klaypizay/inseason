@@ -55,7 +55,7 @@ export const fixtureSeasonProvider: SeasonProvider = {
         "What can players demonstrate consistently in a simple practice task?",
       ],
       assumptions: [
-        "This fixture offers general teaching suggestions, not a measured assessment.",
+        "This prewritten example offers general teaching ideas. Check what fits your players at practice.",
       ],
       goals,
     };

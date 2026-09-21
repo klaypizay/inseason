@@ -1,3 +1,9 @@
+import {
+  practiceSchema,
+  practiceRevisionTarget,
+  validatePractices,
+  type PracticeIntent,
+} from "./practice";
 import { z } from "zod";
 import {
   available,
@@ -16,6 +22,7 @@ export const objectiveSchema = z.strictObject({
   locked: z.boolean(),
 });
 export const weekContentSchema = z.strictObject({
+  practices: z.array(practiceSchema).max(32).optional(),
   rationale: text,
   assumptions: z.array(text).max(6),
   objectives: z.array(objectiveSchema).min(1).max(3),
@@ -97,9 +104,9 @@ export function manualWeek(
   };
   return {
     rationale:
-      "Start with the accepted weekly emphasis, then adjust what you will teach and observe.",
+      "This week starts with the focus from your season roadmap. Adjust what you’ll teach and what progress you’ll look for to fit your team.",
     assumptions: [
-      "Teaching suggestions are not observations or evidence of player ability.",
+      "Check how players respond at practice; the plan is based on your team notes, not a direct assessment of their skills.",
     ],
     objectives: [objective],
     allocations: context.sessions.map((s) => ({
@@ -149,7 +156,7 @@ export function validateWeek(
     )
   )
     throw new PlanRuleError(
-      "Use goals and practice slots from this accepted roadmap week.",
+      "Choose goals and practices from the roadmap currently in use for this week.",
     );
   if (previous) {
     const protectedIds = protectedObjectiveIds(context, previous);
@@ -183,6 +190,7 @@ export function validateWeek(
         );
     }
   }
+  validatePractices(next.practices ?? [], context, previous?.practices ?? []);
   return next;
 }
 export function refreshWeek(
@@ -221,6 +229,7 @@ export function refreshWeek(
   return validateWeek(next, context, previous);
 }
 export const generatedWeekSchema = z.strictObject({
+  practice: practiceSchema.nullable().default(null),
   rationale: text,
   assumptions: z.array(text).max(6),
   objectives: z
@@ -246,6 +255,7 @@ export const generatedWeekSchema = z.strictObject({
 export type WeekGenerationContext = {
   context: WeekContext;
   previous: WeekContent;
+  practiceIntent?: PracticeIntent;
 };
 export function generatedWeek(
   value: unknown,
@@ -262,6 +272,71 @@ export function generatedWeek(
     throw new PlanRuleError(
       "The generated objectives referenced an unavailable goal.",
     );
+  if (input.practiceIntent) {
+    const target = input.practiceIntent.sessionId;
+    if (!output.practice || output.practice.sessionId !== target)
+      throw new PlanRuleError(
+        "The practice draft must match the selected session.",
+      );
+    const drill = practiceRevisionTarget(
+      previous.practices ?? [],
+      input.practiceIntent,
+    );
+    if (drill) {
+      const replacement = output.practice.blocks.find(
+        (b) => b.id === drill.block.id,
+      );
+      if (
+        !replacement ||
+        replacement.minutes !== drill.block.minutes ||
+        replacement.locked
+      )
+        throw new PlanRuleError(
+          "A drill revision must keep the selected drill's time and lock state.",
+        );
+      return validateWeek(
+        {
+          ...previous,
+          practices: previous.practices!.map((p) =>
+            p.sessionId !== target
+              ? p
+              : {
+                  ...p,
+                  blocks: p.blocks.map((b) =>
+                    b.id === drill.block.id ? replacement : b,
+                  ),
+                },
+          ),
+        },
+        context,
+        previous,
+      );
+    }
+    const locked =
+      previous.practices
+        ?.find((p) => p.sessionId === target)
+        ?.blocks.filter((b) => b.locked) ?? [];
+    if (
+      locked.some(
+        (b) =>
+          !output.practice!.blocks.find((next) => next.id === b.id)?.locked,
+      )
+    )
+      throw new PlanRuleError(
+        "Generated revisions must keep your locked blocks locked.",
+      );
+    return validateWeek(
+      {
+        ...previous,
+        practices: [
+          ...(previous.practices ?? []).filter((p) => p.sessionId !== target),
+          output.practice,
+        ],
+      },
+      context,
+      previous,
+    );
+  }
   const protectedIds = protectedObjectiveIds(context, previous);
   const fixed = previous.objectives
     .map((o, i) => ({ ...o, slot: i + 1 }))
@@ -330,6 +405,7 @@ export function generatedWeek(
   });
   return validateWeek(
     {
+      practices: previous.practices,
       rationale: output.rationale,
       assumptions: output.assumptions,
       objectives,

@@ -47,16 +47,20 @@ test("weekly objectives persist, accept, lock and regenerate on desktop and mobi
     await expect(page).toHaveURL(/today$/, { timeout: 20000 });
     await page.goto("/roadmaps/" + roadmap);
     await page
-      .getByRole("link", { name: "Plan this week", exact: true })
+      .getByRole("link", { name: "Prepare this week’s practice", exact: true })
       .click();
     await expect(page).toHaveURL(new RegExp("weeks/" + week));
+    await page.goto("/weeks/" + week + "?advanced=1");
     const field = page.getByRole("textbox", {
       name: "Teaching objective 1",
       exact: true,
     });
     await field.fill("Find and use open passing lanes.");
     await page
-      .getByRole("textbox", { name: "Observable check 1", exact: true })
+      .getByRole("textbox", {
+        name: "What progress would look like 1",
+        exact: true,
+      })
       .fill("Players explain the open passing option to the coach.");
     const save = async (name: string, enabled = true) => {
       const before = await withSession(f!.db, f!.token, (r) =>
@@ -77,9 +81,9 @@ test("weekly objectives persist, accept, lock and regenerate on desktop and mobi
     };
     await save("Save weekly draft");
     await expect(field).toHaveValue("Find and use open passing lanes.");
-    await save("Accept weekly plan");
+    await save("Use these weekly priorities");
     await expect(page.getByRole("status")).toHaveText(
-      "This accepted weekly plan is saved.",
+      "These weekly priorities are saved and in use.",
     );
     await page
       .getByRole("checkbox", {
@@ -89,7 +93,7 @@ test("weekly objectives persist, accept, lock and regenerate on desktop and mobi
       .first()
       .uncheck();
     await page.getByLabel("Lock objective 1", { exact: true }).check();
-    await save("Accept weekly plan", false);
+    await save("Use these weekly priorities", false);
     await expect(
       page.getByLabel("Lock objective 1", { exact: true }),
     ).toBeChecked();
@@ -101,6 +105,12 @@ test("weekly objectives persist, accept, lock and regenerate on desktop and mobi
         exact: true,
       })
       .click();
+    const loading = page.getByRole("dialog", {
+      name: "Preparing your weekly priorities…",
+      exact: true,
+    });
+    await expect(loading).toBeVisible();
+    await expect(loading).not.toBeVisible({ timeout: 60000 });
     await expect
       .poll(
         async () =>
@@ -127,13 +137,16 @@ test("weekly objectives persist, accept, lock and regenerate on desktop and mobi
       ),
     ).toBeVisible();
     await expect(
-      page.getByText("Weekly draft saved. Review before accepting.", {
-        exact: true,
-      }),
+      page.getByText(
+        "Your weekly draft is saved. Review it, then choose Use these weekly priorities.",
+        {
+          exact: true,
+        },
+      ),
     ).toBeVisible();
     await expect(
       page.getByRole("link", {
-        name: "the accepted roadmap used for this version",
+        name: "the roadmap this weekly plan follows",
       }),
     ).toHaveAttribute("href", "/roadmaps/" + roadmap);
     await expect
@@ -157,9 +170,12 @@ test("weekly objectives persist, accept, lock and regenerate on desktop and mobi
       .getByRole("textbox", { name: "Teaching objective 2", exact: true })
       .fill("Recover to a balanced defensive position.");
     await page
-      .getByRole("textbox", { name: "Observable check 2", exact: true })
+      .getByRole("textbox", {
+        name: "What progress would look like 2",
+        exact: true,
+      })
       .fill("Coach observes controlled recovery after the pass.");
-    await save("Accept weekly plan");
+    await save("Use these weekly priorities");
     await expect(
       page.getByRole("textbox", { name: "Teaching objective 2", exact: true }),
     ).toHaveValue("Recover to a balanced defensive position.");

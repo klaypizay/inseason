@@ -15,7 +15,7 @@ function safeMessage(error: unknown) {
     error instanceof SetupRuleError
   )
     return error.message;
-  return "Unable to prepare this draft. Check configuration or try again. Your saved work is unchanged.";
+  return "We couldn’t prepare this draft right now. Your saved plans are unchanged. Please try again.";
 }
 export async function prepareDraft(
   input: unknown,

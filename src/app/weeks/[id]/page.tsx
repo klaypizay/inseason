@@ -7,21 +7,23 @@ import { withSession } from "../../../server/db/repository";
 import { sessionToken } from "../../../server/auth/session";
 import { Unauthorized, NotFound } from "../../../domain/errors";
 import { manualWeek } from "../../../domain/week";
-import { WeekEditor } from "../../../components/week-editor";
+import { PracticePlanner } from "../../../components/practice-planner";
 export const dynamic = "force-dynamic";
+export const metadata = { title: "Practice plan | Season Coach" };
 export const maxDuration = 240;
 export default async function WeekPage({
   params,
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ version?: string }>;
+  searchParams: Promise<{ version?: string; session?: string }>;
 }) {
   const { id } = await params,
-    { version } = await searchParams;
+    { version, session } = await searchParams;
   if (
     !z.uuid().safeParse(id).success ||
-    (version && !z.uuid().safeParse(version).success)
+    (version && !z.uuid().safeParse(version).success) ||
+    (session && !z.uuid().safeParse(session).success)
   )
     notFound();
   let view;
@@ -36,16 +38,16 @@ export default async function WeekPage({
   }
   return (
     <main id="main">
-      <Link href={"/roadmaps/" + view.context.roadmapId}>
-        ← Accepted roadmap
-      </Link>
-      <WeekEditor
+      <Link href={"/roadmaps/" + view.context.roadmapId}>← Season roadmap</Link>
+      <PracticePlanner
         key={
           (view.version?.id ?? "new") +
           view.context.roadmapId +
+          (session ?? "") +
           view.runs.map((r) => r.id + r.status).join("")
         }
         initial={view}
+        selectedSession={session}
         seed={view.version?.content ?? manualWeek(view.context, randomUUID)}
       />
     </main>

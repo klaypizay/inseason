@@ -5,15 +5,19 @@ export const dateFormatSchema = z.enum([
   "YYYY-MM-DD",
 ]);
 export type DateFormat = z.infer<typeof dateFormatSchema>;
+export const timeFormatSchema = z.enum(["12-hour", "24-hour"]);
+export type TimeFormat = z.infer<typeof timeFormatSchema>;
 export const preferenceSchema = z.strictObject({
   displayName: z.string().trim().max(80),
   dateFormat: dateFormatSchema,
+  timeFormat: timeFormatSchema,
   revision: z.number().int().nonnegative(),
 });
 export type Preferences = z.infer<typeof preferenceSchema>;
 export const defaultPreferences: Preferences = {
   displayName: "",
   dateFormat: "MM/DD/YYYY",
+  timeFormat: "12-hour",
   revision: 0,
 };
 export function formatDate(
@@ -33,6 +37,22 @@ export function formatDate(
 export function formatDateText(value: string, format: DateFormat) {
   return value.replace(/\b\d{4}-\d{2}-\d{2}\b/g, (date) =>
     formatDate(date, format),
+  );
+}
+export function formatTime(
+  value: string | null | undefined,
+  format: TimeFormat = "12-hour",
+) {
+  if (!value) return "";
+  if (!/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(value)) return value;
+  if (format === "24-hour") return value;
+  const hour = Number(value.slice(0, 2));
+  return `${hour % 12 || 12}:${value.slice(3)} ${hour < 12 ? "AM" : "PM"}`;
+}
+export function formatTimeText(value: string, format: TimeFormat) {
+  return value.replace(
+    /\b(?:[01]\d|2[0-3]):[0-5]\d\b(?!:\d|\s*[ap]m\b)/gi,
+    (time) => formatTime(time, format),
   );
 }
 export const libraryEditSchema = z.strictObject({
@@ -94,12 +114,24 @@ export function libraryStatus(item: LibraryItem) {
   if (item.status === "queued" || item.status === "running")
     return "Preparing draft";
   if (item.status === "failed") return "Draft unavailable";
-  if (item.action === "assessSeason") return "Assessment · advice";
+  if (item.action === "assessSeason") return "Team assessment · suggestions";
   if (item.isCurrent)
     return item.latestPlanStatus === "draft"
-      ? "Roadmap · draft changes"
+      ? "Roadmap · changes to review"
       : "Roadmap · in use";
   if (item.latestPlanStatus === "draft") return "Roadmap · draft";
-  if (item.wasAccepted) return "Roadmap · saved history";
+  if (item.wasAccepted) return "Roadmap · previously used";
   return "Roadmap · draft";
 }
+
+export const reorderLibrarySchema = z.strictObject({
+  seasonId: z.uuid(),
+  items: moveLibrarySchema.shape.items,
+});
+
+export const reorderFoldersSchema = z.strictObject({
+  items: moveLibrarySchema.shape.items.refine(
+    (items) => items.length <= 100,
+    "Too many folders.",
+  ),
+});

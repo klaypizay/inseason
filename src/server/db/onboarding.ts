@@ -163,7 +163,7 @@ export class OnboardingRepository {
         JSON.stringify(calendar(data)) !== JSON.stringify(calendar(previous))
       )
         throw new SetupRuleError(
-          "Use the accepted roadmap's calendar preview to change dates, phases, availability or events. Other team inputs can still be saved here.",
+          "To change the schedule, open your current roadmap and choose Change dates or practice availability. You can still save other team details here.",
         );
     }
     const programId = s.program_id;
@@ -319,7 +319,7 @@ export class OnboardingRepository {
     z.string().max(100).parse(confirmation);
     if (!this.fresh)
       throw new SetupRuleError(
-        "Sign in again before deleting a synthetic program.",
+        "Sign in again before deleting an example program.",
       );
     await this.q("select pg_advisory_xact_lock(hashtext($1))", [this.actor]);
     const rows = await this.q(

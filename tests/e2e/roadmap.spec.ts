@@ -49,9 +49,7 @@ test("coach edits, accepts, locks, shifts and recovers a roadmap without AI call
       path: info.outputPath("draft-week-board.png"),
       fullPage: true,
     });
-    await page
-      .getByRole("button", { name: "Review & edit roadmap", exact: true })
-      .click();
+
     await expect(page).toHaveURL(/roadmaps\//, { timeout: 30000 });
     await expect(
       page.getByRole("heading", { name: "Review your season roadmap." }),
@@ -66,7 +64,7 @@ test("coach edits, accepts, locks, shifts and recovers a roadmap without AI call
     await openWeek();
     const boardScroll = await page.evaluate(() => scrollY);
     await page
-      .getByRole("textbox", { name: "Weekly emphasis", exact: true })
+      .getByRole("textbox", { name: "What to teach this week", exact: true })
       .fill("Find open passing lanes together.");
     await page.getByRole("button", { name: "Next week", exact: true }).click();
     await expect(
@@ -76,7 +74,10 @@ test("coach edits, accepts, locks, shifts and recovers a roadmap without AI call
       .getByRole("button", { name: "Previous week", exact: true })
       .click();
     await expect(
-      page.getByRole("textbox", { name: "Weekly emphasis", exact: true }),
+      page.getByRole("textbox", {
+        name: "What to teach this week",
+        exact: true,
+      }),
     ).toHaveValue("Find open passing lanes together.");
     await page.screenshot({ path: info.outputPath("week-overlay.png") });
     await page.keyboard.press("Escape");
@@ -94,16 +95,22 @@ test("coach edits, accepts, locks, shifts and recovers a roadmap without AI call
       fullPage: true,
     });
     await change("Save draft edits");
-    await expect(page.getByRole("status")).toHaveText(/Saved version/, {
-      timeout: 30000,
-    });
+    await expect(page.getByRole("status")).toHaveText(
+      /Review what your team will work on each week/,
+      {
+        timeout: 30000,
+      },
+    );
     await page.reload();
     await openWeek();
     await expect(
-      page.getByRole("textbox", { name: "Weekly emphasis", exact: true }),
+      page.getByRole("textbox", {
+        name: "What to teach this week",
+        exact: true,
+      }),
     ).toHaveValue("Find open passing lanes together.");
     if (await page.getByRole("dialog").isVisible()) await closeWeek();
-    await change("Accept roadmap");
+    await change("Use this roadmap");
     await expect(
       page.getByRole("heading", {
         name: "Your season, with a clear next step.",
@@ -115,20 +122,28 @@ test("coach edits, accepts, locks, shifts and recovers a roadmap without AI call
     const firstAccepted = page.url();
     await openWeek();
     await page
-      .getByLabel("Lock this week's teaching content", { exact: true })
+      .getByLabel("Lock this week's focus and progress check", { exact: true })
       .check();
     if (await page.getByRole("dialog").isVisible()) await closeWeek();
-    await change("Accept roadmap");
+    await change("Use this roadmap");
     await openWeek();
     await expect(
-      page.getByRole("textbox", { name: "Weekly emphasis", exact: true }),
+      page.getByRole("textbox", {
+        name: "What to teach this week",
+        exact: true,
+      }),
     ).toBeDisabled({ timeout: 30000 });
     await page.reload();
     await openWeek();
     await expect(
-      page.getByLabel("Lock this week's teaching content", { exact: true }),
+      page.getByLabel("Lock this week's focus and progress check", {
+        exact: true,
+      }),
     ).toBeChecked();
     await closeWeek();
+    await page
+      .getByText("Change dates or practice availability", { exact: true })
+      .click();
     await page
       .getByLabel("New season start", { exact: true })
       .fill("2027-01-11");
@@ -137,14 +152,17 @@ test("coach edits, accepts, locks, shifts and recovers a roadmap without AI call
       .getByRole("button", { name: "Prepare date preview", exact: true })
       .click();
     await change("Save calendar preview");
-    await expect(page.getByRole("status")).toHaveText(/Saved version/, {
-      timeout: 30000,
-    });
+    await expect(page.getByRole("status")).toHaveText(
+      /Review what your team will work on each week/,
+      {
+        timeout: 30000,
+      },
+    );
     await expect(
       page.getByText(/01\/11\/2027 to 04\/04\/2027/).first(),
     ).toBeVisible({ timeout: 30000 });
     if (await page.getByRole("dialog").isVisible()) await closeWeek();
-    await change("Accept roadmap");
+    await change("Use this roadmap");
     await expect(
       page.getByRole("heading", {
         name: "Your season, with a clear next step.",
@@ -155,16 +173,24 @@ test("coach edits, accepts, locks, shifts and recovers a roadmap without AI call
       page.getByText(/01\/11\/2027 to 04\/04\/2027/).first(),
     ).toBeVisible({ timeout: 30000 });
     await page.goto(firstAccepted);
-    await change(/Recover version .* as a new draft/);
-    await expect(page.getByRole("status")).toHaveText(/Saved version/, {
-      timeout: 30000,
-    });
+    await page
+      .getByText("Saved versions & reuse an earlier plan", { exact: true })
+      .click();
+    await change(/Reuse version .* as a new draft/);
+    await expect(page.getByRole("status")).toHaveText(
+      /Review what your team will work on each week/,
+      {
+        timeout: 30000,
+      },
+    );
     await expect(
       page.getByText(/01\/11\/2027 to 04\/04\/2027/).first(),
     ).toBeVisible({ timeout: 30000 });
     await openWeek();
     await expect(
-      page.getByLabel("Lock this week's teaching content", { exact: true }),
+      page.getByLabel("Lock this week's focus and progress check", {
+        exact: true,
+      }),
     ).toBeChecked();
     expect(
       await page.evaluate(

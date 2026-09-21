@@ -1,6 +1,8 @@
 "use client";
-import { useDateFormat } from "./preferences-provider";
+import { useDateFormat, useTimeFormat } from "./preferences-provider";
 import Link from "next/link";
+import { useWeekGeneration } from "./use-week-generation";
+import { AIGenerationOverlay } from "./ai-generation-overlay";
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -8,12 +10,7 @@ import {
   type WeekContent,
   type WeekView,
 } from "../domain/week";
-import {
-  beginWeek,
-  executeWeeklyDraft,
-  refreshWeekDraft,
-  saveWeek,
-} from "../server/week/actions";
+import { beginWeek, refreshWeekDraft, saveWeek } from "../server/week/actions";
 export function WeekEditor({
   initial,
   seed,
@@ -22,10 +19,12 @@ export function WeekEditor({
   seed: WeekContent;
 }) {
   const date = useDateFormat();
+  const time = useTimeFormat();
   const router = useRouter();
   const [content, setContent] = useState(seed),
     [dirty, setDirty] = useState(false),
     [error, setError] = useState(""),
+    [generating, setGenerating] = useState(false),
     [pending, startTransition] = useTransition();
   const { context, version } = initial,
     week = context.week;
@@ -36,30 +35,7 @@ export function WeekEditor({
   );
   const canEdit = initial.editable && !initial.stale && !run;
   const protectedIds = protectedObjectiveIds(context, seed);
-  useEffect(() => {
-    if (run?.status !== "queued") return;
-    let alive = true;
-    void executeWeeklyDraft(run.id)
-      .then((r) => {
-        if (!alive) return;
-        if (r.error) setError(r.error);
-        router.refresh();
-      })
-      .catch(() => {
-        if (alive)
-          setError(
-            "Connection interrupted. Refresh to check the saved attempt.",
-          );
-      });
-    return () => {
-      alive = false;
-    };
-  }, [run?.id, run?.status, router]);
-  useEffect(() => {
-    if (!run || dirty) return;
-    const timer = setInterval(() => router.refresh(), 3000);
-    return () => clearInterval(timer);
-  }, [run, dirty, router]);
+  useWeekGeneration(run, !dirty, setError);
   useEffect(() => {
     if (!dirty) return;
     const warn = (e: BeforeUnloadEvent) => e.preventDefault();
@@ -70,18 +46,27 @@ export function WeekEditor({
     setContent(next);
     setDirty(true);
   }
-  function act(work: () => Promise<{ id?: string; error?: string }>) {
+  function act(
+    work: () => Promise<{ id?: string; error?: string }>,
+    ai = false,
+  ) {
+    if (ai) setGenerating(true);
+    setError("");
     startTransition(async () => {
-      setError("");
       try {
         const r = await work();
-        if (r.error) setError(r.error);
-        else {
+        if (r.error) {
+          setGenerating(false);
+          setError(r.error);
+        } else {
           setDirty(false);
-          router.replace("/weeks/" + week.id);
+          router.replace("/weeks/" + week.id + "?advanced=1", {
+            scroll: false,
+          });
           router.refresh();
         }
       } catch {
+        setGenerating(false);
         setError("Connection interrupted. Keep your edits here and retry.");
       }
     });
@@ -98,8 +83,13 @@ export function WeekEditor({
     });
   return (
     <>
+      <AIGenerationOverlay
+        active={(generating || !!run) && !error}
+        title="Preparing your weekly priorities…"
+        description="Connecting this week’s teaching goals to your season roadmap and available practices."
+      />
       <p className="eyebrow">
-        WEEKLY PLANNER · {current ? "ACCEPTED" : "COACH REVIEW"}
+        WEEKLY PRIORITIES · {current ? "IN USE" : "FOR YOUR REVIEW"}
         {version ? ` · VERSION ${version.number}` : ""}
       </p>
       <h1>A clear purpose for this week.</h1>
@@ -114,10 +104,10 @@ export function WeekEditor({
           : dirty
             ? "Unsaved changes — save before leaving."
             : current
-              ? "This accepted weekly plan is saved."
+              ? "These weekly priorities are saved and in use."
               : version
-                ? "Weekly draft saved. Review before accepting."
-                : "Start with the roadmap emphasis, or generate a weekly draft."}
+                ? "Your weekly draft is saved. Review it, then choose Use these weekly priorities."
+                : "Your roadmap gives this week a starting focus. Adjust the priorities below or ask us to suggest them."}
       </p>
       {error && (
         <p role="alert" className="error">
@@ -128,9 +118,9 @@ export function WeekEditor({
         <section className="card draft-section">
           <h2>The roadmap has changed</h2>
           <p>
-            This version remains linked to its original roadmap. Refresh a draft
-            to review its goals and practice assignments against the current
-            calendar.
+            This plan was based on an earlier roadmap. Update the draft to bring
+            in your current roadmap and schedule, then check that the weekly
+            goals still fit.
           </p>
           <button
             disabled={!initial.editable || pending}
@@ -145,34 +135,40 @@ export function WeekEditor({
               )
             }
           >
-            Refresh from accepted roadmap
+            Update draft from current roadmap
           </button>
         </section>
       )}
       {!initial.editable && (
         <p className="error">
-          This view is historical, past, or awaiting an updated accepted
-          roadmap.{" "}
-          <Link href={"/weeks/" + week.id}>Open latest weekly review</Link>.
+          This copy can’t be edited because it is from an earlier version, the
+          week has passed, or its roadmap is no longer in use.{" "}
+          <Link href={"/weeks/" + week.id}>
+            Open the latest plan for this week
+          </Link>
+          .
         </p>
       )}
       <section className="card draft-section">
-        <h2>Teaching objectives</h2>
+        <h2>What you want to teach this week</h2>
         <p className="small">
-          Choose one to three priorities. These are teaching recommendations,
-          not claims about player ability.
+          Choose one to three priorities and a sign of progress for each. These
+          give your practice plans a clear purpose. Use what you see at practice
+          to judge whether they fit the team.
         </p>
         <div className="button-row">
           <button
             disabled={!canEdit || dirty || pending || !!run}
             onClick={() =>
-              act(() =>
-                beginWeek(
-                  week.id,
-                  initial.reviewId,
-                  context.roadmapId,
-                  crypto.randomUUID(),
-                ),
+              act(
+                () =>
+                  beginWeek(
+                    week.id,
+                    initial.reviewId,
+                    context.roadmapId,
+                    crypto.randomUUID(),
+                  ),
+                true,
               )
             }
           >
@@ -186,8 +182,8 @@ export function WeekEditor({
         </div>
         {run && (
           <p role="status">
-            Preparing a draft… attempt {Math.max(run.attempts, 1)} of at most 3.
-            You can return to this week to check progress.
+            Preparing your weekly priorities. You can return to this week to
+            check progress; the finished draft will be saved for review.
           </p>
         )}
         {initial.runs[0]?.status === "failed" && (
@@ -200,7 +196,10 @@ export function WeekEditor({
           </p>
         )}
         {initial.runs[0]?.provider === "fixture" && (
-          <p className="small">Demo example · not a live AI plan.</p>
+          <p className="small">
+            Prewritten example to help you try weekly planning. These
+            suggestions are not personalized to your team.
+          </p>
         )}
         {content.objectives.map((o, i) => {
           const old = seed.objectives.find((x) => x.id === o.id),
@@ -225,7 +224,7 @@ export function WeekEditor({
                 />
               </label>
               <label>
-                Observable check {i + 1}
+                What progress would look like {i + 1}
                 <textarea
                   maxLength={600}
                   disabled={disabled}
@@ -312,8 +311,9 @@ export function WeekEditor({
       <section className="card draft-section">
         <h2>Practices & competition</h2>
         <p className="small">
-          Assign priorities to the accepted calendar slots. Empty assignments
-          mean no selected teaching objective for that practice.
+          Choose which teaching priorities each scheduled practice will work on.
+          If you leave a practice unchecked, it has no specific weekly priority
+          assigned yet.
         </p>
         {!display.sessions.length && (
           <p>
@@ -325,18 +325,18 @@ export function WeekEditor({
           <p key={e.id}>
             <strong>{e.type.replaceAll("_", " ")}</strong> · {date(e.start)} to{" "}
             {date(e.end)}
-            {e.time ? ` · ${e.time}` : ""}
+            {e.time ? ` · ${time(e.time)}` : ""}
             {e.blocksPractice ? " · Blocks practice" : ""}
           </p>
         ))}
         {display.sessions.map((s) => (
           <fieldset className="row-card" key={s.id}>
             <legend>
-              {date(s.date)} · {s.time} · {s.minutes} min · {s.status}
+              {date(s.date)} · {time(s.time)} · {s.minutes} min · {s.status}
             </legend>
             {s.override && (
               <p className="small">
-                Coach-approved calendar override: {s.override}
+                Your note about this schedule change: {s.override}
               </p>
             )}
             <label className="check">
@@ -408,24 +408,37 @@ export function WeekEditor({
           </fieldset>
         ))}
         <Link href={"/roadmaps/" + context.roadmapId + "#calendar-review"}>
-          Review dates, availability, or an explicit calendar override
+          Change practice dates or explain a schedule exception
         </Link>
       </section>
       <section className="card draft-section">
-        <h2>Why this week?</h2>
+        <h2>Why this plan fits your week</h2>
+        <p>
+          Generating weekly objectives produces teaching priorities, signs of
+          success to look for, and assignments to your available practices.
+          These notes explain those choices and what you should check before
+          using the plan. You can edit them to reflect your coaching judgment.
+        </p>
         <label>
-          Weekly explanation
+          Why these priorities?
           <textarea
+            aria-describedby="weekly-rationale-help"
             disabled={!canEdit || pending}
             maxLength={600}
             value={content.rationale}
             onChange={(e) => update({ ...content, rationale: e.target.value })}
           />
         </label>
+        <p id="weekly-rationale-help" className="small">
+          Explain how this week’s objectives support your roadmap goals and fit
+          the time available. For example: “With one practice before Saturday’s
+          game, revisit spacing rather than introduce a new offense.”
+        </p>
         <label>
-          Weekly assumptions (one per line, up to six)
+          Things to confirm (one per line, up to six)
           <textarea
             disabled={!canEdit || pending}
+            aria-describedby="weekly-assumptions-help"
             value={content.assumptions.join("\n")}
             onChange={(e) =>
               update({
@@ -435,12 +448,24 @@ export function WeekEditor({
             }
           />
         </label>
+        <p id="weekly-assumptions-help" className="small">
+          These are assumptions or missing information, not verified facts about
+          your players. For example: “Attendance is not confirmed” or “Check
+          whether the second hoop is available.” Review each item and update
+          your team settings or weekly plan if needed.
+        </p>
         <p className="small">
-          Goal links refer to{" "}
+          These notes are saved with this plan and help guide new suggestions if
+          you regenerate the weekly priorities. Editing the notes alone doesn’t
+          change your goals, practice assignments or team settings. Check them
+          again after generating new suggestions.
+        </p>
+        <p className="small">
+          The season goals come from{" "}
           <Link href={"/roadmaps/" + (version?.roadmapId ?? context.roadmapId)}>
-            the accepted roadmap used for this version
+            the roadmap this weekly plan follows
           </Link>
-          . No observation of a player is implied.
+          .
         </p>
         <div className="button-row save-bar">
           <button
@@ -475,7 +500,7 @@ export function WeekEditor({
               )
             }
           >
-            Accept weekly plan
+            Use these weekly priorities
           </button>
         </div>
       </section>
@@ -486,9 +511,10 @@ export function WeekEditor({
           {initial.history.map((v) => (
             <li key={v.id}>
               <Link href={"/weeks/" + week.id + "?version=" + v.id}>
-                Version {v.number} · {v.status}
+                Version {v.number} ·{" "}
+                {v.status === "accepted" ? "Chosen for coaching" : "Draft"}
               </Link>
-              {v.id === initial.currentId ? " · Active" : ""}
+              {v.id === initial.currentId ? " · In use" : ""}
             </li>
           ))}
         </ul>

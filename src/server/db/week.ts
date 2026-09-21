@@ -1,3 +1,7 @@
+import {
+  practiceIntentSchema,
+  practiceRevisionTarget,
+} from "../../domain/practice";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { NotFound } from "../../domain/errors";
@@ -105,6 +109,18 @@ export class WeekRepository {
         participation: coach.participation,
       },
     };
+  }
+  async savedPractices(seasonId: string) {
+    return this.q<{
+      weekId: string;
+      sessionId: string;
+      title: string;
+      status: string;
+      date: string;
+    }>(
+      `select h.week_id as "weekId",p->>'sessionId' as "sessionId",p->>'title' as title,v.status,s.local_date::text as date from coach.week_heads h join coach.week_versions v on v.id=coalesce(h.review_id,h.current_id) join coach.programs owner on owner.id=v.program_id cross join lateral jsonb_array_elements(coalesce(v.snapshot->'content'->'practices','[]'::jsonb)) p join coach.plan_sessions s on s.id=(p->>'sessionId')::uuid and s.season_id=v.season_id where owner.owner_id=$1 and v.season_id=$2 order by s.local_date desc limit 100`,
+      [this.actor, z.uuid().parse(seasonId)],
+    );
   }
   private async head(id: string) {
     const [row] = await this.q<{
@@ -314,7 +330,7 @@ export class WeekRepository {
     );
     if (previous && previous.roadmapId !== context.roadmapId)
       throw new PlanRuleError(
-        "Refresh this weekly draft from the accepted roadmap before editing it.",
+        "The roadmap has changed. Choose Update draft from current roadmap before editing this week.",
       );
     const baseline = previous?.content ?? manualWeek(context, randomUUID);
     const content = validateWeek(input, context, baseline);
@@ -347,7 +363,29 @@ export class WeekRepository {
     provider: string,
     model: string,
     quota: number,
+    practiceInput?: unknown,
+    draftInput?: unknown,
   ) {
+    const intent =
+      practiceInput === undefined
+        ? undefined
+        : practiceIntentSchema.parse(practiceInput);
+    if (draftInput !== undefined) {
+      if (!intent?.blockId)
+        throw new PlanRuleError(
+          "Choose a drill before saving edits with an AI revision.",
+        );
+      // The enclosing withSession transaction also includes the queued run.
+      // A failed target/quota/stale check rolls back this draft save.
+      expected = await this.save(
+        id,
+        expected,
+        roadmap,
+        draftInput,
+        request,
+        false,
+      );
+    }
     const owner = await this.owner(id, true);
     z.uuid().parse(request);
     z.number().int().min(1).max(100).parse(quota);
@@ -362,7 +400,7 @@ export class WeekRepository {
     const { context, previous } = await this.writable(id, expected, roadmap);
     if (previous && previous.roadmapId !== context.roadmapId)
       throw new PlanRuleError(
-        "Refresh this weekly draft from the accepted roadmap first.",
+        "The roadmap has changed. Choose Update draft from current roadmap before asking for new suggestions.",
       );
     await this.q(
       "update coach.generation_runs set status='failed',error_code='interrupted',updated_at=now() where program_id=$1 and status in ('queued','running') and lease_expires_at<now()",
@@ -381,8 +419,28 @@ export class WeekRepository {
         context,
         previous: previous?.content ?? manualWeek(context, randomUUID),
       };
+    if (intent) {
+      const session = context.sessions.find((s) => s.id === intent.sessionId);
+      if (
+        !session ||
+        session.status !== "scheduled" ||
+        session.date < context.today
+      )
+        throw new PlanRuleError("Choose an upcoming scheduled practice.");
+      if (
+        !context.coach.season.playerCount ||
+        context.coach.season.hoops === null
+      )
+        throw new PlanRuleError(
+          "Confirm player count and hoops in Team setup first.",
+        );
+      practiceRevisionTarget(payload.previous.practices ?? [], intent);
+      payload.practiceIntent = intent;
+    }
     if (Buffer.byteLength(JSON.stringify(payload)) > 48000)
-      throw new PlanRuleError("Weekly generation context is too large.");
+      throw new PlanRuleError(
+        "There’s too much planning detail to prepare this week. Shorten your team notes and try again.",
+      );
     await this.q(
       "insert into coach.generation_runs(id,program_id,season_id,action,idempotency_key,context_version,model,prompt_version,provider,status,lease_expires_at,created_by) values($1,$2,$3,'draftWeek',$4,$5,$6,'m4-v1',$7,'queued',now()+interval '5 minutes',$8)",
       [
@@ -418,6 +476,14 @@ export class WeekRepository {
     );
     if (!run) throw new NotFound();
     return run;
+  }
+  async status(id: string) {
+    const [run] = await this.q<{ status: string }>(
+      "select case when g.status in ('queued','running') and g.lease_expires_at<now() then 'failed' else g.status end as status from coach.generation_runs g join coach.week_generation_contexts c on c.id=g.id join coach.programs p on p.id=g.program_id where g.id=$1 and p.owner_id=$2 and g.action='draftWeek'",
+      [z.uuid().parse(id), this.actor],
+    );
+    if (!run) throw new NotFound();
+    return run.status;
   }
   async claim(id: string, provider: string, model: string) {
     await this.q("select pg_advisory_xact_lock(hashtext($1))", [this.actor]);

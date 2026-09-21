@@ -8,6 +8,8 @@ import {
   type LibraryFolder,
   folderMutationSchema,
   moveLibrarySchema,
+  reorderLibrarySchema,
+  reorderFoldersSchema,
 } from "../../domain/preferences";
 import { NotFound } from "../../domain/errors";
 import { PlanRuleError } from "../../domain/roadmap";
@@ -19,7 +21,7 @@ export class PreferencesRepository {
   ) {}
   async get(): Promise<Preferences> {
     const [row] = await this.q<Preferences>(
-      'select display_name as "displayName",date_format as "dateFormat",revision from coach.preferences where account_id=$1',
+      'select display_name as "displayName",date_format as "dateFormat",time_format as "timeFormat",revision from coach.preferences where account_id=$1',
       [this.actor],
     );
     return row ?? { ...defaultPreferences };
@@ -33,8 +35,8 @@ export class PreferencesRepository {
         "Settings changed in another tab. Close and reopen settings before saving.",
       );
     await this.q(
-      "insert into coach.preferences(account_id,display_name,date_format,revision) values($1,$2,$3,1) on conflict(account_id) do update set display_name=excluded.display_name,date_format=excluded.date_format,revision=coach.preferences.revision+1,updated_at=now()",
-      [this.actor, data.displayName, data.dateFormat],
+      "insert into coach.preferences(account_id,display_name,date_format,time_format,revision) values($1,$2,$3,$4,1) on conflict(account_id) do update set display_name=excluded.display_name,date_format=excluded.date_format,time_format=excluded.time_format,revision=coach.preferences.revision+1,updated_at=now()",
+      [this.actor, data.displayName, data.dateFormat, data.timeFormat],
     );
     return this.get();
   }
@@ -65,15 +67,34 @@ export class LibraryRepository {
   async list(season: string) {
     return this.q<LibraryItem>(
       this.query +
-        " where s.id=$1 and p.owner_id=$2 and g.prompt_version='m2-v1' order by g.created_at desc limit 200",
+        " where s.id=$1 and p.owner_id=$2 and g.prompt_version='m2-v1' order by g.library_position,g.created_at desc,g.id limit 200",
       [z.uuid().parse(season), this.actor],
     );
   }
   async folders() {
     return this.q<LibraryFolder>(
-      "select id,name,revision from coach.library_folders where account_id=$1 order by name",
+      "select id,name,revision from coach.library_folders where account_id=$1 order by position,name,id",
       [this.actor],
     );
+  }
+  async reorderFolders(input: unknown) {
+    const data = reorderFoldersSchema.parse(input);
+    await this.q("select pg_advisory_xact_lock(hashtext($1))", [this.actor]);
+    const current = await this.folders();
+    if (
+      current.length !== data.items.length ||
+      data.items.some(
+        (i) => !current.some((f) => f.id === i.id && f.revision === i.revision),
+      )
+    )
+      throw new PlanRuleError(
+        "Folders changed. Reload before reordering; nothing was moved.",
+      );
+    await this.q(
+      "update coach.library_folders f set position=ordered.position::integer,revision=revision+1 from unnest($1::uuid[]) with ordinality as ordered(id,position) where f.id=ordered.id and f.account_id=$2",
+      [data.items.map((i) => i.id), this.actor],
+    );
+    return { count: current.length };
   }
   private async ensureFolder(name: string) {
     if (!name) return;
@@ -159,6 +180,30 @@ export class LibraryRepository {
       [target, ids],
     );
     return { count: ids.length, folder: target };
+  }
+  async reorder(input: unknown) {
+    const data = reorderLibrarySchema.parse(input);
+    await this.q("select pg_advisory_xact_lock(hashtext($1))", [this.actor]);
+    // Read one beyond the UI limit so a partial library cannot be reordered.
+    const current = await this.q<LibraryItem>(
+      this.query +
+        " where s.id=$1 and p.owner_id=$2 and g.prompt_version='m2-v1' order by g.library_position,g.created_at desc,g.id limit 201",
+      [data.seasonId, this.actor],
+    );
+    if (
+      current.length !== data.items.length ||
+      data.items.some(
+        (i) => !current.some((r) => r.id === i.id && r.revision === i.revision),
+      )
+    )
+      throw new PlanRuleError(
+        "The library changed. Reload before reordering; nothing was moved.",
+      );
+    await this.q(
+      "update coach.generation_runs g set library_position=ordered.position::integer,library_revision=library_revision+1,updated_at=now() from unnest($1::uuid[]) with ordinality as ordered(id,position) where g.id=ordered.id",
+      [data.items.map((i) => i.id)],
+    );
+    return { count: data.items.length };
   }
   async save(id: string, input: unknown) {
     const data = libraryEditSchema.parse(input);

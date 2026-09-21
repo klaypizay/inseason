@@ -50,7 +50,7 @@ export async function saveSetup(
 function fieldLabel(path: PropertyKey[]) {
   const labels: Record<string, string> = {
     teamName: "Team name",
-    title: "Season title",
+    title: "Season name",
     start: "Start date",
     end: "End date",
     timezone: "Timezone",
@@ -64,7 +64,7 @@ function fieldLabel(path: PropertyKey[]) {
     minutes: "duration (minutes)",
     time: "start time",
     endTime: "end time",
-    alias: "alias",
+    alias: "nickname",
     note: "availability note",
     participation: "participation",
   };

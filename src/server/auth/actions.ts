@@ -60,7 +60,8 @@ export async function signIn(_state: { error: string }, form: FormData) {
     });
     if (error || !data.user || !data.session)
       return {
-        error: "Unable to sign in. Check your credentials and try again.",
+        error:
+          "Unable to sign in. Check your email and password, then try again.",
       };
     // No provider credentials are persisted; revoke the short-lived login exchange.
     const logout = await client.auth.signOut({ scope: "local" });

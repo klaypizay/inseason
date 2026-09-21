@@ -17,12 +17,10 @@ test("two managed coaches see only their own seeded team", async ({ page }) => {
       .fill(process.env[`E2E_COACH_${suffix}_PASSWORD`]!);
     await page.getByRole("checkbox").check();
     await page.getByRole("button", { name: "Sign in" }).click();
-    await expect(
-      page.getByRole("heading", { name: own, exact: true }),
-    ).toBeVisible({ timeout: 20000 });
-    await expect(
-      page.getByRole("heading", { name: other, exact: true }),
-    ).toHaveCount(0);
+    await expect(page.getByText(own, { exact: true })).toBeVisible({
+      timeout: 20000,
+    });
+    await expect(page.getByText(other, { exact: true })).toHaveCount(0);
     await page.getByRole("button", { name: "Sign out" }).click();
     await expect(page).toHaveURL(/\/login$/);
   }
@@ -84,7 +82,7 @@ test("managed login, refresh and revoked cookie replay", async ({
   await page.getByRole("checkbox").check();
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(
-    page.getByRole("heading", { name: "Welcome back, coach." }),
+    page.getByRole("button", { name: "Sign out", exact: true }),
   ).toBeVisible();
   await page.reload();
   await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();

@@ -81,16 +81,58 @@ export class RoadmapRepository {
     }));
     return p;
   }
+  async navigation() {
+    const [s] = await this.q<{
+      id: string;
+      complete: boolean;
+      currentId: string | null;
+      reviewId: string | null;
+      timezone: string;
+    }>(
+      'select s.id,s.setup_complete as complete,s.current_plan_id as "currentId",s.review_plan_id as "reviewId",s.timezone from coach.seasons s join coach.programs p on p.id=s.program_id where p.owner_id=$1 order by s.created_at,s.id limit 1',
+      [this.actor],
+    );
+    if (!s)
+      return {
+        complete: false,
+        currentId: null,
+        reviewId: null,
+        nextWeekId: null,
+      };
+    let nextWeekId: string | null = null;
+    if (s.currentId) {
+      const [next] = await this.q<{ id: string | null }>(
+        "select coalesce((select x.week_id from coach.plan_sessions x join coach.plan_weeks w on w.id=x.week_id and w.season_id=x.season_id where x.season_id=$1 and x.status='scheduled' and x.local_date>=$2::date and w.active order by x.local_date,x.local_time,x.id limit 1),(select id from coach.plan_weeks where season_id=$1 and active and end_date>=$2::date order by start_date,id limit 1)) as id",
+        [s.id, localToday(s.timezone)],
+      );
+      nextWeekId = next?.id ?? null;
+    }
+    return {
+      complete: s.complete,
+      currentId: s.currentId,
+      reviewId: s.reviewId,
+      nextWeekId,
+    };
+  }
   async summary(seasonId: string) {
     const s = await this.season(seasonId);
-    const plan = s.current_plan_id
-      ? (await this.version(s.current_plan_id)).plan
-      : null;
+    const plan = await this.livePlan(s);
+    const nextSession =
+      plan?.sessions
+        .filter(
+          (x) =>
+            x.status === "scheduled" && x.date >= localToday(plan.timezone),
+        )
+        .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time))[0] ??
+      null;
     return {
+      nextSession,
       currentId: s.current_plan_id,
       reviewId: s.review_plan_id,
       nextWeekId:
-        plan?.weeks.find((w) => w.end >= localToday(plan.timezone))?.id ?? null,
+        nextSession?.weekId ??
+        plan?.weeks.find((w) => w.end >= localToday(plan.timezone))?.id ??
+        null,
     };
   }
   async get(id: string): Promise<RoadmapView> {
@@ -361,7 +403,7 @@ export class RoadmapRepository {
         old.plan.phases.some((p) => !current.phases.some((x) => x.id === p.id))
       )
         throw new PlanRuleError(
-          "This pre-acceptance draft belongs to an obsolete phase layout. Recover an accepted version, or copy its teaching text into the current phases.",
+          "Your season phases have changed since this draft. Reuse a previously chosen version, or copy these teaching ideas into your current roadmap.",
         );
       plan = structuredClone(current);
       plan.rationale = old.plan.rationale;

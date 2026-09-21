@@ -65,8 +65,9 @@ export function FolderManager({
         title={mode === "create" ? "New folder" : "Manage folders"}
       >
         <p>
-          Folders organize your roadmap library. Removing a folder keeps its
-          roadmaps in Unfiled.
+          Group roadmaps and assessments however you like, such as “Preseason
+          ideas” or “Plans to revisit.” Removing a folder keeps its contents in
+          Unfiled.
         </p>
         <form
           onSubmit={(e) => {
@@ -136,9 +137,9 @@ export function FolderManager({
           {confirmDelete && folder && (
             <div role="alert" className="row-card">
               <p>
-                Remove “{folder.name}”? Its roadmaps will move to Unfiled,
-                including archived and trashed items. No roadmaps will be
-                deleted.
+                Remove “{folder.name}”? Its contents will move to Unfiled,
+                including archived and trashed items. No saved plans or
+                assessments will be deleted.
               </p>
               <div className="button-row">
                 <button

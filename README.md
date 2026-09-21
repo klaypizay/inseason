@@ -1,4 +1,4 @@
-# Season Coach · Milestone 3
+# Season Coach · Roadmap and practice planning
 
 Foundation for an adult basketball coach's private workspace. Includes managed sign-in, immediate app-session revocation, a responsive Today shell, private PostgreSQL schema and tenant-scoped repository, synthetic fixtures, CI and a deterministic AI interface. M1 adds resumable team/coach setup, season phases, practice availability, events, optional roster aliases and attributed assessment inputs. M2 adds live OpenAI assessment and coarse season roadmap drafts with evidence checks, saved history and bounded retries. M3 adds manual roadmap review, acceptance, locks, calendar previews and immutable version history.
 
@@ -73,7 +73,7 @@ For the two-coach manual check: sign in separately as both seeded coaches; each 
 - AI fixture actions return typed Unknown drafts with no evidence or active-plan mutations. M2 implements assessment and roadmap schemas; later action placeholders remain unavailable to users.
 - No real youth data until the original privacy/vendor/retention/coaching and security launch gates are resolved. M1 verifies synthetic live-data cascades; production privacy deletion and operational backups remain future launch gates.
 
-Next milestone: **M5 — Practice generator and player goals**.
+M5 now has a first practice-planning slice. Individual player goals and the remaining M5 acceptance work are still pending.
 
 ## Syncing with GitHub
 
@@ -114,7 +114,7 @@ The ignored `.env.m2-test-budget` reserves $0.10 per attempted call, at most nin
 
 ## Roadmap review and calendar (M3)
 
-From a saved roadmap draft, choose **Review & edit roadmap**. Edit the explanation, assumptions, phase goals, observable checks, weekly emphases and checkpoints. **Save draft edits** preserves a review without changing the active plan. **Accept roadmap** atomically activates the reviewed content and calendar. Season links to the accepted version and any unfinished review. No AI connection is needed for editing or acceptance.
+A generated roadmap opens its review board automatically. Scan the weekly cards and select a week for a quick edit. Edit the explanation, assumptions, phase goals, observable checks, weekly emphases and checkpoints. **Save draft edits** preserves a review without changing the active plan. **Use this roadmap** atomically activates the reviewed content and calendar. Season links to the accepted version and any unfinished review. No AI connection is needed for editing or acceptance.
 
 Choose a phase or teaching week to navigate its goals and sessions. A week with no sessions explicitly shows no team practice. Locks protect goal text/checks or a week's teaching content. Save and accept an unlock before changing protected active content. Started/past teaching weeks and past/completed/canceled sessions remain fixed. Completion and detailed practice activities are later milestones; M3's sessions are scheduled calendar slots.
 
@@ -132,12 +132,9 @@ M3 hosted/browser tests provision isolated synthetic fixtures; the browser test 
 
 ## Weekly planner (M4)
 
-From **Season**, choose **Plan the next teaching week**, or open the accepted
-roadmap, select a week card and choose **Plan this week**. Start manually from the
-accepted emphasis or generate a weekly draft on demand. Choose one to three
+Open **Next practice**, then expand **Weekly focus & advanced options** for the detailed weekly planner. Start manually from the roadmap emphasis or generate a weekly draft on demand. Choose one to three
 objectives, observable checks and season-goal links. Save a weekly draft to resume
-later; **Accept weekly plan** activates a new immutable weekly version. Detailed
-timed drills and practice blocks arrive in M5.
+later; **Accept weekly plan** activates a new immutable weekly version. The default practice view now adds timed activity blocks; individual player goals remain future work.
 
 Assign objectives to the accepted calendar slots. Editing an assignment marks it
 as a coach override; **Keep these assignments when regenerating** preserves it.
@@ -177,13 +174,16 @@ never reset it to bypass a budget. See [M4 design](docs/M4-design.md) and
 
 Dates default to **MM/DD/YYYY**. Open **Settings** in the header to save a date
 format, coach display name, experience, guidance and philosophy in **Profile (Coach)**.
+Times default to **12-hour with AM/PM**. The **Time format** setting also offers
+24-hour time, and applies to schedules, time entry and printed practice plans.
+Changing this preference does not change scheduled times or the team's timezone.
 The **Team** tab edits team details, season, players and assessment inputs directly
 in the popup. Practice schedule and Events schedule are separate steps here and
 on the existing setup page. Switching tabs preserves edits; closing warns before
 discarding unsaved changes. Native calendar pickers follow the browser's
 locale; all displayed calendar dates use the saved preference.
 
-Open **Season** to organize saved roadmaps and assessments. **Name & organize**
+Open **Saved plans** to organize saved roadmaps and assessments. **Edit**
 renames an item, assigns a folder, or moves it to Archive. **New folder** creates
 a persistent empty folder; **Manage folders** renames or removes folders. Removing
 a folder moves its roadmaps to Unfiled without deleting them. **Delete** on each
@@ -207,9 +207,18 @@ selected card moves the entire selection. Touch and keyboard users use the same
 bulk move controls. Changing a filter clears selection. Moves are all-or-nothing
 and do not accept a roadmap, change its status, or alter teaching content.
 
-**How planning works** explains the process on Season: team setup, optional
+**New to coaching?** in the desktop sidebar and the guide on **Start here** explain the process: team setup, optional
 assessment, roadmap draft, review/accept, and weekly planning. An assessment is
 advice, not a prerequisite or active plan. Acceptance chooses the roadmap used
 for weekly planning. Demo/synthetic data and example output are separate labels,
 not lifecycle stages. Library badges distinguish drafts, the roadmap in use,
 draft changes awaiting review and retained history.
+
+
+## Fast planning flow
+
+After setup, **Start here** offers one next step. Create a season roadmap, scan its weekly cards, quick-edit where needed and choose **Use this roadmap**. An assessment is optional. Explanations, calendar changes and version recovery are behind disclosure controls.
+
+**Next practice** opens the timed practice planner. Choose a scheduled practice, optionally describe what is different today, then **Build this practice**. Review activities, minutes, coaching cues and expandable setup/easier-version instructions. Each drill card has **Lock this drill**; save the draft or choose **Use this practice** to keep lock changes. **Quick edit** opens **Edit manually** and **Ask AI** tabs. The AI tab revises only the selected unlocked drill, keeping its time and the rest of the practice unchanged. **Save edits & revise drill** saves pending edits and queues the request together; the result remains a draft for review. **Describe a change to your practice** can revise the full practice while preserving saved locks. **Use this practice** saves it for coaching; **Print / Save PDF** includes activity instructions. Saved practice links appear under **Saved plans**. Detailed weekly objectives and assignments remain under **Weekly focus & advanced options**.
+
+Practice content is optional structured data inside existing immutable weekly snapshots; no new migration is needed for this slice. The server validates exact duration, session ownership, available player/hoop capacity and protected content. Generation shares existing quotas and provider settings. The ten-minute planning target is a usability goal, not a measured guarantee. Browser tests use the free synthetic provider; live quality and speed for the new practice prompt still need a separately authorized check. Individual player goals are not implemented.

@@ -82,3 +82,27 @@ export async function moveLibraryItems(input: unknown) {
     return { error: message(e) };
   }
 }
+
+export async function reorderLibraryItems(input: unknown) {
+  try {
+    return {
+      reordered: await withSession(database, await sessionToken(), (r) =>
+        r.library().reorder(input),
+      ),
+    };
+  } catch (e) {
+    return { error: message(e) };
+  }
+}
+
+export async function reorderFolders(input: unknown) {
+  try {
+    return {
+      reordered: await withSession(database, await sessionToken(), (r) =>
+        r.library().reorderFolders(input),
+      ),
+    };
+  } catch (e) {
+    return { error: message(e) };
+  }
+}

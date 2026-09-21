@@ -1,4 +1,5 @@
 "use client";
+import { TimeInput } from "./time-input";
 import { useDateFormat } from "./preferences-provider";
 import {
   useEffect,
@@ -21,8 +22,8 @@ const steps = [
   "Season",
   "Practice schedule",
   "Events schedule",
-  "Players",
-  "Assessment inputs",
+  "Players (optional)",
+  "Team notes & finish",
 ];
 const weekdays = [
   "Sunday",
@@ -119,7 +120,7 @@ export function SetupForm({
               rows={3}
               maxLength={600}
               value={data.reports[field]}
-              placeholder="Leave blank if you are not sure."
+              placeholder="A few words are enough. Leave blank if you’re still getting to know the team."
               onChange={(e) =>
                 change("reports", { ...data.reports, [field]: e.target.value })
               }
@@ -128,8 +129,8 @@ export function SetupForm({
         </Field>
         <p className="small">
           {data.reports[field]
-            ? "Coach report · not independently verified"
-            : "Unknown · no assumption made"}
+            ? "Based on what you’ve shared"
+            : "You can add this later"}
           {source && !dirty ? " · Saved " + date(source.reportedAt) : ""}
         </p>
       </div>
@@ -153,7 +154,7 @@ export function SetupForm({
             mode !== "full"
               ? "Saved. Your coach and team settings are up to date."
               : complete
-                ? "Saved. Setup complete. Your inputs are ready for assessment when planning becomes available."
+                ? "Setup saved. Open Season roadmap to create your team’s week-by-week outline."
                 : "Saved. You can safely leave and resume later.",
           );
           if (next) setStep((s) => Math.min(steps.length - 1, s + 1));
@@ -240,8 +241,10 @@ export function SetupForm({
               {mode !== "coach" && (
                 <>
                   <p>
-                    Names are optional for players. Use synthetic aliases while
-                    this is a development preview.
+                    Share what you’d like the team to learn. We’ll use your
+                    answers to shape the goals, activities and level of guidance
+                    in your plans. Player names are optional; use made-up names
+                    while trying this preview.
                   </p>
                   {input("teamName", "Team name")}
                   {report("teamType", ["School", "Recreation", "AAU", "Other"])}
@@ -271,7 +274,7 @@ export function SetupForm({
           )}
           {visibleStep === 1 && (
             <>
-              {input("title", "Season title")}
+              {input("title", "Season name")}
               <div className="field-grid">
                 <Field label="Season start">
                   <input
@@ -280,7 +283,7 @@ export function SetupForm({
                     onChange={(e) => change("start", e.target.value || null)}
                   />
                 </Field>
-                <Field label="Season end (inclusive)">
+                <Field label="Last day of the season">
                   <input
                     type="date"
                     value={data.end ?? ""}
@@ -304,13 +307,16 @@ export function SetupForm({
                 </Field>
               </div>
               <p className="small">
-                Use an IANA timezone, such as America/Chicago or Europe/London.
-                Practice times below are local to this timezone.
+                Enter your time zone as a city-based name, such as
+                America/Chicago or Europe/London. All practice times use this
+                time zone.
               </p>
               <h3>Season phases</h3>
               <p>
-                Skip phases you do not need. For a simple season, approve one
-                in-season phase, then edit it if needed.
+                Phases are parts of your season, such as preparation before
+                games begin and the main playing season. Keep it simple with one
+                phase for the whole season, or add separate phases if your goals
+                change during the year.
               </p>
               {!data.phases.length && (
                 <button
@@ -323,7 +329,7 @@ export function SetupForm({
                     ])
                   }
                 >
-                  Approve one in-season phase
+                  Use one phase for the whole season
                 </button>
               )}
               {data.phases.map((p, i) => (
@@ -437,10 +443,11 @@ export function SetupForm({
                 </Field>
               </div>
               {report("equipment")}
-              <h3>Regular practice availability</h3>
+              <h3>When does your team practice?</h3>
               <p>
-                No regular practices is valid. These are available time slots,
-                not generated sessions.
+                Add your usual practice days, times and lengths so the roadmap
+                can fit your schedule. Activity plans come next. If dates aren’t
+                settled yet, you can leave this empty and add them later.
               </p>
               {data.availability.map((p, i) => (
                 <div className="row-card" key={p.id ?? i}>
@@ -467,20 +474,19 @@ export function SetupForm({
                         ))}
                       </select>
                     </Field>
-                    <Field label="Start time">
-                      <input
-                        type="time"
-                        value={p.time}
-                        onChange={(e) =>
-                          change(
-                            "availability",
-                            data.availability.map((r, j) =>
-                              j === i ? { ...r, time: e.target.value } : r,
-                            ),
-                          )
-                        }
-                      />
-                    </Field>
+                    <TimeInput
+                      label="Start time"
+                      required
+                      value={p.time}
+                      onChange={(value) =>
+                        change(
+                          "availability",
+                          data.availability.map((r, j) =>
+                            j === i ? { ...r, time: value } : r,
+                          ),
+                        )
+                      }
+                    />
                     <Field label="Duration (minutes)">
                       <input
                         type="number"
@@ -500,7 +506,10 @@ export function SetupForm({
                       />
                     </Field>
                     {(["start", "end"] as const).map((k) => (
-                      <Field key={k} label={"Effective " + k + " (optional)"}>
+                      <Field
+                        key={k}
+                        label={"Schedule " + k + " date (optional)"}
+                      >
                         <input
                           type="date"
                           value={p[k] ?? ""}
@@ -618,27 +627,23 @@ export function SetupForm({
                       </Field>
                     ))}
                     {(["time", "endTime"] as const).map((k) => (
-                      <Field
+                      <TimeInput
                         key={k}
                         label={
                           k === "time"
                             ? "Event start time (optional)"
                             : "Event end time (optional)"
                         }
-                      >
-                        <input
-                          type="time"
-                          value={p[k]}
-                          onChange={(e) =>
-                            change(
-                              "events",
-                              data.events.map((r, j) =>
-                                j === i ? { ...r, [k]: e.target.value } : r,
-                              ),
-                            )
-                          }
-                        />
-                      </Field>
+                        value={p[k]}
+                        onChange={(value) =>
+                          change(
+                            "events",
+                            data.events.map((r, j) =>
+                              j === i ? { ...r, [k]: value } : r,
+                            ),
+                          )
+                        }
+                      />
                     ))}
                   </div>
                   <label className="check">
@@ -699,13 +704,15 @@ export function SetupForm({
           {visibleStep === 4 && (
             <>
               <p>
-                A roster is optional. Your approximate count is enough for
-                team-level planning. Blank aliases save as “Player 1”, “Player
-                2”, and so on.
+                Your approximate player count is enough to get started. Add a
+                roster if it helps you keep track of who can participate.
+                Players without a name are saved as “Player 1”, “Player 2”, and
+                so on.
               </p>
               <p className="small">
-                Availability is a coach report, not attendance or a medical
-                assessment. Avoid medical details.
+                These are your planning notes about expected participation.
+                Confirm availability before practice and leave out medical
+                details.
               </p>
               {!data.players.length && (
                 <p className="empty">
@@ -716,7 +723,7 @@ export function SetupForm({
                 <div className="row-card" key={p.id ?? i}>
                   <h4>Player {i + 1}</h4>
                   <div className="field-grid">
-                    <Field label={"Player " + (i + 1) + " alias (optional)"}>
+                    <Field label={"Player " + (i + 1) + " nickname (optional)"}>
                       <input
                         maxLength={80}
                         value={p.alias}
@@ -803,8 +810,10 @@ export function SetupForm({
           {visibleStep === 5 && (
             <>
               <p>
-                Tell us what you have seen so far. These remain your reports; no
-                assessment is generated at this stage.
+                What have you noticed at practice or in games? A few notes help
+                us suggest a more useful season roadmap. If you haven’t met the
+                team yet, leave these blank and update them later. You can also
+                use these notes for an optional team assessment.
               </p>
               {report("strengths")}
               {report("gaps")}
@@ -813,7 +822,7 @@ export function SetupForm({
                 <h3>Your setup</h3>
                 <p>
                   {data.teamName || "Team name needed"} ·{" "}
-                  {data.reports.ageBand || "Age band unknown"} ·{" "}
+                  {data.reports.ageBand || "Age group not added"} ·{" "}
                   {data.playerCount ?? "Unknown"} players
                 </p>
                 <p>
@@ -826,8 +835,8 @@ export function SetupForm({
                   {data.events.length} events · {data.hoops ?? "Unknown"} hoops
                 </p>
                 <p>
-                  Blank answers stay Unknown. You can edit every answer after
-                  saving.
+                  Ready? Finish setup, then open Season roadmap. You can return
+                  to change any answer as you learn more about your team.
                 </p>
               </div>
             </>

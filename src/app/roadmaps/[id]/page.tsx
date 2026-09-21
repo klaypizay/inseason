@@ -8,6 +8,7 @@ import { sessionToken } from "../../../server/auth/session";
 import { Unauthorized, NotFound } from "../../../domain/errors";
 import { RoadmapEditor } from "../../../components/roadmap-editor";
 export const dynamic = "force-dynamic";
+export const metadata = { title: "Review your season roadmap | Season Coach" };
 export default async function RoadmapPage({
   params,
 }: {
@@ -33,7 +34,7 @@ export default async function RoadmapPage({
   }
   return (
     <main id="main">
-      <Link href="/season">← Season</Link>
+      <Link href="/season">← Season roadmap</Link>
       {library && (
         <LibraryDetails
           key={library.id + ":" + library.revision}

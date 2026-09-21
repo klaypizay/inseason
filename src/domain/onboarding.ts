@@ -2,12 +2,12 @@ import { z } from "zod";
 
 export const reportFields = {
   experience: "Coaching experience",
-  guidance: "Guidance level",
+  guidance: "How much coaching guidance would help?",
   teamType: "Team type",
-  ageBand: "Age band",
+  ageBand: "Age group",
   skill: "Approximate skill level",
   goals: "Season goals",
-  philosophy: "Teaching philosophy",
+  philosophy: "How would you like to coach?",
   equipment: "Equipment available",
   strengths: "What is working?",
   gaps: "What needs work?",
@@ -87,7 +87,7 @@ export const setupSchema = z
         } catch {
           return false;
         }
-      }, "Choose a valid IANA timezone, such as America/Chicago."),
+      }, "Enter a time zone such as America/Chicago or Europe/London."),
     weekStart: z.number().int().min(0).max(6),
     playerCount: z.number().int().min(1).max(50).nullable(),
     hoops: z.number().int().min(0).max(20).nullable(),
@@ -172,7 +172,7 @@ export const setupSchema = z
       )
         issue(
           ["phases"],
-          "Approve a phase covering the season, or enter phases covering every date without gaps.",
+          "Use one phase for the whole season, or add phases that cover every season date without gaps.",
         );
     }
   });

@@ -8,11 +8,14 @@ import { Unauthorized, NotFound } from "../../../domain/errors";
 import { DraftView } from "../../../components/draft-view";
 import { z } from "zod";
 export const dynamic = "force-dynamic";
+export const metadata = { title: "Review season suggestions | Season Coach" };
 export const maxDuration = 240;
 export default async function DraftPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ source?: string }>;
 }) {
   const { id } = await params;
   if (!z.uuid().safeParse(id).success) notFound();
@@ -32,14 +35,17 @@ export default async function DraftPage({
   }
   return (
     <main id="main">
-      <Link href="/season">← Season drafts</Link>
+      <Link href="/season">← Season roadmap</Link>
       {library && (
         <LibraryDetails
           key={library.id + ":" + library.revision}
           initial={library}
         />
       )}
-      <DraftView initial={view} />
+      <DraftView
+        initial={view}
+        showSource={(await searchParams).source === "1"}
+      />
     </main>
   );
 }
