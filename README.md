@@ -1,4 +1,22 @@
-# Season Coach · Roadmap and practice planning
+# InSeason
+
+Sport-agnostic season and practice planning for coaches. Intended production domain: **InSeason.ai** (not connected or deployed).
+
+This independent clone starts from basketballcoach.ing commit `566ebe2`. The inherited implementation is currently basketball-specific; the multi-sport conversion is not implemented yet. Uncommitted signup, OAuth, and player-goal changes from the basketball workspace are not included.
+
+Development branch: `codex/inseason`. The original repository is retained as `upstream` for fetching; its push URL is intentionally disabled. The InSeason repository is `https://github.com/klaypizay/inseason.git`, configured as `origin`.
+
+## InSeason implementation scope
+
+- Select a sport during team setup; retain basketball as the default for existing records.
+- Share seasons, rosters, schedules, player goals, and coach review workflows across sports.
+- Make terminology, playing areas, equipment, activity constraints, examples, and AI planning depend on the selected sport.
+- Keep generated plans grounded in the selected sport and coach-provided resources; avoid basketball assumptions in other sports.
+- Use InSeason branding throughout the product. Provision separate hosting and authentication configuration before publishing to InSeason.ai.
+- Use synthetic data for validation. No production secrets, database connections, or deployment links were copied into this clone.
+
+## Inherited basketball implementation
+
 
 Foundation for an adult basketball coach's private workspace. Includes managed sign-in, immediate app-session revocation, a responsive Today shell, private PostgreSQL schema and tenant-scoped repository, synthetic fixtures, CI and a deterministic AI interface. M1 adds resumable team/coach setup, season phases, practice availability, events, optional roster aliases and attributed assessment inputs. M2 adds live OpenAI assessment and coarse season roadmap drafts with evidence checks, saved history and bounded retries. M3 adds manual roadmap review, acceptance, locks, calendar previews and immutable version history.
 
