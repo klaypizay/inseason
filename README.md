@@ -17,7 +17,6 @@ Development branch: `codex/inseason`. The original repository is retained as `up
 
 ## Inherited basketball implementation
 
-
 Foundation for an adult basketball coach's private workspace. Includes managed sign-in, immediate app-session revocation, a responsive Today shell, private PostgreSQL schema and tenant-scoped repository, synthetic fixtures, CI and a deterministic AI interface. M1 adds resumable team/coach setup, season phases, practice availability, events, optional roster aliases and attributed assessment inputs. M2 adds live OpenAI assessment and coarse season roadmap drafts with evidence checks, saved history and bounded retries. M3 adds manual roadmap review, acceptance, locks, calendar previews and immutable version history.
 
 Original specifications remain unchanged in [`md files/`](md%20files/). See [M0 design](docs/M0-design.md) for security decisions and [verification](docs/M0-verification.md) for actual results and outstanding gates.
@@ -33,6 +32,15 @@ The synthetic acceptance fixture is a first-year 13U coach, nine players, twelve
 See [M1 design](docs/M1-design.md) and [M1 verification](docs/M1-verification.md). Synthetic program deletion is exercised through the repository tests, restricted to migration-marked synthetic programs, exact name confirmation and a login within ten minutes. It verifies live database cascades, not production backup erasure.
 
 ## Local setup
+
+### Notion practice export
+
+Create a public Notion integration with an optional template page named
+`InSeason Practice Plans` and the OAuth redirect URI
+`https://YOUR_DOMAIN/api/notion/callback`. Set `NOTION_CLIENT_ID`,
+`NOTION_CLIENT_SECRET`, and a base64-encoded 32-byte
+`NOTION_TOKEN_ENCRYPTION_KEY`. Coaches can then connect Notion from a saved
+practice and export that practice as a private workspace page.
 
 1. Use Node.js 22 or newer. Run `npm ci --ignore-scripts`.
 2. Copy `.env.example` to `.env.local`. Never commit populated settings. Use a **synthetic development Supabase project** with email/password authentication. Disable public signups in the provider's settings, and provision two confirmed adult test-coach accounts in the Supabase dashboard. Put their auth UUIDs in `SEED_COACH_A_ID` and `SEED_COACH_B_ID`. Keep passwords in the provider/password manager.
@@ -231,7 +239,6 @@ advice, not a prerequisite or active plan. Acceptance chooses the roadmap used
 for weekly planning. Demo/synthetic data and example output are separate labels,
 not lifecycle stages. Library badges distinguish drafts, the roadmap in use,
 draft changes awaiting review and retained history.
-
 
 ## Fast planning flow
 

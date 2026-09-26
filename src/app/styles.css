@@ -1407,6 +1407,23 @@ textarea:disabled {
   font-size: clamp(28px, 3vw, 40px);
   margin-bottom: 12px;
 }
+.practice-command-center {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 28px;
+  align-items: end;
+  padding: 24px;
+  margin: 18px 0 24px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: linear-gradient(135deg, #f7f8f2 0%, #e7eee0 100%);
+}
+.practice-command-center h1 {
+  margin: 4px 0 8px;
+}
+.practice-command-center .practice-toolbar {
+  justify-content: flex-end;
+}
 .practice-workspace > .eyebrow {
   margin-bottom: 12px;
 }
@@ -1428,6 +1445,42 @@ textarea:disabled {
 .quick-request {
   padding: 20px;
   margin: 20px 0;
+}
+.creator-studio {
+  border: 2px solid var(--ink);
+  background: #183b35;
+  color: white;
+  box-shadow: 8px 8px 0 var(--accent);
+}
+.creator-studio summary {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 20px;
+}
+.creator-studio-kicker {
+  color: var(--accent);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+}
+.creator-studio .small {
+  color: #d8e2dc;
+}
+.creator-studio input {
+  background: white;
+}
+.creator-studio button {
+  background: var(--accent);
+  color: var(--ink);
+  border-color: var(--accent);
+}
+.creator-studio .creator-secondary {
+  background: transparent;
+  color: white;
+  border-color: #b8cbc1;
+}
+.creator-studio .creator-secondary:hover {
+  background: #294f48;
 }
 .quick-request label {
   margin-top: 0;
@@ -1452,12 +1505,38 @@ textarea:disabled {
   gap: 16px;
   margin: 28px 0 16px;
 }
+.practice-plan-heading {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  padding: 14px 18px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--paper) 94%, transparent);
+  backdrop-filter: blur(12px);
+}
+.practice-plan-heading .eyebrow {
+  margin: 0 0 3px;
+}
 .practice-plan-heading h2 {
   margin: 0;
 }
 .practice-timeline {
   list-style: none;
   padding: 0;
+}
+.practice-step {
+  margin: 0 0 4px !important;
+  color: #687970;
+  font-size: 11px !important;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.notion-button {
+  background: #fff;
+  color: #111;
+  border-color: #111;
 }
 .practice-block {
   padding: 18px;
@@ -1512,6 +1591,10 @@ textarea:disabled {
   min-width: 0;
 }
 @media (max-width: 700px) {
+  .practice-command-center {
+    grid-template-columns: 1fr;
+    padding: 18px;
+  }
   .quick-path {
     grid-template-columns: 1fr;
   }
@@ -1529,6 +1612,31 @@ textarea:disabled {
   .practice-plan-heading {
     align-items: flex-start;
     flex-direction: column;
+  }
+}
+@media (min-width: 900px) {
+  .practice-timeline {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 12px;
+    align-items: start;
+  }
+  .practice-block {
+    margin: 0;
+    min-height: 210px;
+  }
+  .practice-block-title {
+    display: grid;
+    grid-template-columns: 62px minmax(0, 1fr);
+    gap: 12px;
+  }
+  .practice-block-title button {
+    grid-column: 2;
+    justify-self: start;
+  }
+  .practice-block details,
+  .practice-drill-lock {
+    margin-left: 74px;
   }
 }
 @media (min-width: 1024px) {
