@@ -8,6 +8,7 @@ import { sessionToken } from "../../../server/auth/session";
 import { Unauthorized, NotFound } from "../../../domain/errors";
 import { manualWeek } from "../../../domain/week";
 import { PracticePlanner } from "../../../components/practice-planner";
+import { notionConnected } from "../../../server/notion";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Practice plan | Season Coach" };
 export const maxDuration = 240;
@@ -49,6 +50,7 @@ export default async function WeekPage({
         initial={view}
         selectedSession={session}
         seed={view.version?.content ?? manualWeek(view.context, randomUUID)}
+        notionConnected={await notionConnected()}
       />
     </main>
   );

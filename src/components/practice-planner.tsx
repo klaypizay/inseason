@@ -10,14 +10,17 @@ import { useDateFormat, useTimeFormat } from "./preferences-provider";
 import { WeekEditor } from "./week-editor";
 import { Overlay } from "./overlay";
 import { AIGenerationOverlay } from "./ai-generation-overlay";
+import { exportPracticeToNotion } from "../server/notion/actions";
 export function PracticePlanner({
   initial,
   seed,
   selectedSession,
+  notionConnected,
 }: {
   initial: WeekView;
   seed: WeekContent;
   selectedSession?: string;
+  notionConnected: boolean;
 }) {
   const query = useSearchParams();
   const time = useTimeFormat();
@@ -43,6 +46,7 @@ export function PracticePlanner({
     [drillBrief, setDrillBrief] = useState(""),
     [generating, setGenerating] = useState(false),
     [advanced, setAdvanced] = useState(query.get("advanced") === "1"),
+    [notionBusy, setNotionBusy] = useState(false),
     [pending, start] = useTransition();
   const context = initial.version?.context ?? initial.context;
   const session = context.sessions.find((s) => s.id === selected),
@@ -68,6 +72,9 @@ export function PracticePlanner({
   const total = plan?.blocks.reduce((n, b) => n + b.minutes, 0) ?? 0;
   useWeekGeneration(run, !advanced, setError);
   useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "instant" });
+  }, []);
+  useEffect(() => {
     if (!dirty) return;
     const warn = (e: BeforeUnloadEvent) => e.preventDefault();
     window.addEventListener("beforeunload", warn);
@@ -82,6 +89,43 @@ export function PracticePlanner({
       ],
     });
     setDirty(true);
+  }
+  function addActivity() {
+    if (!plan || plan.blocks.length >= 10) return;
+    const donorIndex = [...plan.blocks]
+      .map((item, index) => ({ item, index }))
+      .reverse()
+      .find(({ item }) => item.minutes > 1)?.index;
+    if (donorIndex === undefined) {
+      setError("Shorten another activity before adding one.");
+      return;
+    }
+    const minutes = Math.min(5, plan.blocks[donorIndex].minutes - 1);
+    const id = crypto.randomUUID();
+    changePlan({
+      ...plan,
+      blocks: [
+        ...plan.blocks.map((item, index) =>
+          index === donorIndex
+            ? { ...item, minutes: item.minutes - minutes }
+            : item,
+        ),
+        {
+          id,
+          title: "New activity",
+          minutes,
+          setup: "Describe the space, groups, and equipment.",
+          cues: "Add the one or two things players should focus on.",
+          simpler: "Describe an easier version.",
+          purpose: "Explain how this supports the practice focus.",
+          players: context.coach.season.playerCount ?? 1,
+          hoops: Math.min(1, context.coach.season.hoops ?? 0),
+          locked: false,
+        },
+      ],
+    });
+    setEditing(id);
+    setEditTab("manual");
   }
   function action(
     work: () => Promise<{ id?: string; error?: string }>,
@@ -136,38 +180,42 @@ export function PracticePlanner({
         title="Preparing your practice…"
         description="Shaping your drills around your team and weekly goals. Locked drills stay protected."
       />
-      <p className="eyebrow">2 · NEXT PRACTICE</p>
-      <h1>{ready ? "Ready to coach." : "Your next practice, made simple."}</h1>
-      <p className="lede">This week’s focus: {context.week.emphasis}</p>
-      <div className="practice-toolbar no-print">
-        <label>
-          Practice
-          <select
-            value={selected}
-            disabled={dirty || pending || !!run}
-            onChange={(e) => {
-              setSelected(e.target.value);
-              router.replace(
-                "/weeks/" + context.week.id + "?session=" + e.target.value,
-                { scroll: false },
-              );
-            }}
-          >
-            {context.sessions.map((s) => (
-              <option key={s.id} value={s.id}>
-                {date(s.date)} · {time(s.time)} · {s.minutes} min
-              </option>
-            ))}
-          </select>
-        </label>
-        <span>
-          {ready
-            ? "✓ Saved for coaching"
-            : plan
-              ? "Draft · review before use"
-              : "Not planned yet"}
-        </span>
-      </div>
+      <header className="practice-command-center">
+        <div>
+          <p className="eyebrow">2 · NEXT PRACTICE</p>
+          <h1>{ready ? "Ready to coach." : "Shape your next practice."}</h1>
+          <p className="lede">This week’s focus: {context.week.emphasis}</p>
+        </div>
+        <div className="practice-toolbar no-print">
+          <label>
+            Practice
+            <select
+              value={selected}
+              disabled={dirty || pending || !!run}
+              onChange={(e) => {
+                setSelected(e.target.value);
+                router.replace(
+                  "/weeks/" + context.week.id + "?session=" + e.target.value,
+                  { scroll: false },
+                );
+              }}
+            >
+              {context.sessions.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {date(s.date)} · {time(s.time)} · {s.minutes} min
+                </option>
+              ))}
+            </select>
+          </label>
+          <span>
+            {ready
+              ? "✓ Saved for coaching"
+              : plan
+                ? "Draft · review before use"
+                : "Not planned yet"}
+          </span>
+        </div>
+      </header>
       {initial.stale && (
         <p role="alert">
           Your roadmap changed.{" "}
@@ -203,14 +251,15 @@ export function PracticePlanner({
           </div>
           {editable && (
             <details
-              className="card quick-request no-print"
-              open={!plan}
+              className="card quick-request creator-studio no-print"
+              open
               key={plan ? "revise" : "build"}
             >
               <summary>
-                {plan
-                  ? "Describe a change to your practice"
-                  : "Build your practice"}
+                <span className="creator-studio-kicker">
+                  CREATE &amp; REDESIGN
+                </span>
+                {plan ? "Plan with AI" : "Build your practice with AI"}
               </summary>
               <label htmlFor="practice-brief">
                 {plan
@@ -245,9 +294,20 @@ export function PracticePlanner({
                   {run
                     ? "Preparing your practice…"
                     : plan
-                      ? "Revise plan"
+                      ? "Redesign this practice"
                       : "Build this practice"}
                 </button>
+                {plan && (
+                  <button
+                    className="creator-secondary"
+                    disabled={
+                      pending || !!run || dirty || plan.blocks.length >= 10
+                    }
+                    onClick={addActivity}
+                  >
+                    + Add activity manually
+                  </button>
+                )}
                 {dirty && (
                   <span>Save quick edits before asking for a revision.</span>
                 )}
@@ -281,7 +341,10 @@ export function PracticePlanner({
           {plan && (
             <>
               <div className="practice-plan-heading">
-                <h2>{plan.title}</h2>
+                <div>
+                  <p className="eyebrow">PRACTICE FLOW</p>
+                  <h2>{plan.title}</h2>
+                </div>
                 <strong>
                   {total} / {session.minutes} min
                 </strong>
@@ -292,7 +355,7 @@ export function PracticePlanner({
                   before saving.
                 </p>
               )}
-              <ol className="practice-timeline">
+              <ol className="practice-timeline" aria-label="Practice flow">
                 {plan.blocks.map((b, index) => {
                   const from = plan.blocks
                     .slice(0, index)
@@ -305,6 +368,9 @@ export function PracticePlanner({
                           <small>minutes</small>
                         </span>
                         <div>
+                          <p className="practice-step">
+                            {index + 1} of {plan.blocks.length}
+                          </p>
                           <h3>{b.title}</h3>
                           <p>{b.cues}</p>
                         </div>
@@ -417,9 +483,45 @@ export function PracticePlanner({
                   </>
                 )}
                 {ready && (
-                  <button className="secondary" onClick={() => window.print()}>
-                    Print / Save PDF
-                  </button>
+                  <>
+                    <button
+                      className="secondary"
+                      onClick={() => window.print()}
+                    >
+                      Print / Save PDF
+                    </button>
+                    {notionConnected ? (
+                      <button
+                        className="notion-button"
+                        disabled={notionBusy}
+                        onClick={async () => {
+                          setNotionBusy(true);
+                          setError("");
+                          const result = await exportPracticeToNotion({
+                            weekId: context.week.id,
+                            sessionId: selected,
+                          });
+                          setNotionBusy(false);
+                          if (result.error) setError(result.error);
+                          else if (result.url)
+                            window.open(
+                              result.url,
+                              "_blank",
+                              "noopener,noreferrer",
+                            );
+                        }}
+                      >
+                        {notionBusy ? "Exporting…" : "Export to Notion"}
+                      </button>
+                    ) : (
+                      <a
+                        className="button-link notion-button"
+                        href={`/api/notion/connect?week=${context.week.id}`}
+                      >
+                        Connect Notion
+                      </a>
+                    )}
+                  </>
                 )}
                 {dirty && <span>Unsaved edits or lock changes</span>}
               </div>
