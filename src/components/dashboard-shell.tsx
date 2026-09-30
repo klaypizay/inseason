@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { SettingsButton } from "./preferences-provider";
 import { SiteNavigation, type NavigationWorkspace } from "./site-navigation";
 
@@ -36,8 +36,6 @@ export function DashboardShell({
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  useEffect(() => setMobileOpen(false), [path]);
-
   const initials = (displayName || "Coach")
     .split(/\s+/)
     .filter(Boolean)
@@ -49,7 +47,13 @@ export function DashboardShell({
     <div
       className={`dashboard-shell${collapsed ? " sidebar-collapsed" : ""}${mobileOpen ? " mobile-nav-open" : ""}`}
     >
-      <aside className="dashboard-sidebar" aria-label="Workspace sidebar">
+      <aside
+        className="dashboard-sidebar"
+        aria-label="Workspace sidebar"
+        onClick={(event) => {
+          if ((event.target as HTMLElement).closest("a")) setMobileOpen(false);
+        }}
+      >
         <div className="sidebar-brand-row">
           <Link className="brand" href="/today" aria-label="InSeason home">
             <span className="brand-mark" aria-hidden="true">
