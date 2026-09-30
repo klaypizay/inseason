@@ -56,15 +56,15 @@ test("sign-in failure is actionable and does not show a successful workspace", a
   await page
     .getByLabel("Password", { exact: true })
     .fill("invalid-synthetic-password");
-  await page
-    .getByRole("form", { name: "Email sign in" })
-    .getByRole("checkbox")
-    .check();
-  await page.getByRole("button", { name: "Sign in" }).click();
-  await expect(page.getByRole("main").getByRole("alert")).toContainText(
+  const emailForm = page.getByRole("form", { name: "Email sign in" });
+  await emailForm.getByRole("checkbox").check();
+  await emailForm.getByRole("button", { name: "Sign in" }).click();
+  await expect(emailForm.getByRole("alert")).toContainText(
     /unavailable|Unable to sign in|Too many/,
   );
-  await expect(page.getByRole("button", { name: "Sign in" })).toBeEnabled();
+  await expect(
+    emailForm.getByRole("button", { name: "Sign in" }),
+  ).toBeEnabled();
   await expect(page).toHaveURL(/\/login$/);
 });
 test("managed login, refresh and revoked cookie replay", async ({
