@@ -1,8 +1,5 @@
-import { SiteNavigation } from "../components/site-navigation";
-import {
-  PreferencesProvider,
-  SettingsButton,
-} from "../components/preferences-provider";
+import { PreferencesProvider } from "../components/preferences-provider";
+import { DashboardShell } from "../components/dashboard-shell";
 import { withSession } from "../server/db/repository";
 import { database } from "../server/db/runtime";
 import { sessionToken } from "../server/auth/session";
@@ -21,6 +18,7 @@ export default async function RootLayout({
 }) {
   let preferences = null;
   let navigation = null;
+  let folders: { id: string; name: string }[] = [];
   const token = await sessionToken();
   if (token) {
     try {
@@ -29,10 +27,12 @@ export default async function RootLayout({
         return {
           preferences,
           navigation: await r.roadmap().navigation(),
+          folders: await r.library().folders(),
         };
       });
       preferences = workspace.preferences;
       navigation = workspace.navigation;
+      folders = workspace.folders.map(({ id, name }) => ({ id, name }));
     } catch (e) {
       if (!(e instanceof Unauthorized)) throw e;
     }
@@ -47,22 +47,30 @@ export default async function RootLayout({
           <a className="skip" href="#main">
             Skip to content
           </a>
-          <header className="site-header">
-            <a className="brand" href="/today">
-              <span aria-hidden="true">◉</span> SEASON COACH
-            </a>
-            {preferences && <SiteNavigation workspace={navigation} />}
-            <div className="header-tools">
-              <span className="tag">Your team. Your plan.</span>
-              <SettingsButton />
-            </div>
-          </header>
-          <div className="site-content">
-            {children}
-            <footer>
-              Plan with your team’s goals in mind. Adjust as they grow.
-            </footer>
-          </div>
+          {preferences ? (
+            <DashboardShell
+              workspace={navigation}
+              folders={folders}
+              displayName={preferences.displayName}
+            >
+              {children}
+            </DashboardShell>
+          ) : (
+            <>
+              <header className="site-header guest-header">
+                <a className="brand" href="/today">
+                  <span aria-hidden="true">◉</span> INSEASON
+                </a>
+                <span className="tag">Your team. Your plan.</span>
+              </header>
+              <div className="site-content">
+                {children}
+                <footer>
+                  Plan with your team’s goals in mind. Adjust as they grow.
+                </footer>
+              </div>
+            </>
+          )}
         </PreferencesProvider>
       </body>
     </html>
