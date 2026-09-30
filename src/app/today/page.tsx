@@ -10,7 +10,7 @@ import {
   DisplayTime,
 } from "../../components/preferences-provider";
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Start here | Season Coach" };
+export const metadata = { title: "Start here | InSeason" };
 export default async function Today() {
   let result;
   try {

@@ -8,7 +8,7 @@ import { sessionToken } from "../../../server/auth/session";
 import { Unauthorized, NotFound } from "../../../domain/errors";
 import { RoadmapEditor } from "../../../components/roadmap-editor";
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Review your season roadmap | Season Coach" };
+export const metadata = { title: "Review your season roadmap | InSeason" };
 export default async function RoadmapPage({
   params,
 }: {

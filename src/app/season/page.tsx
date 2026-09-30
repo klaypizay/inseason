@@ -7,7 +7,7 @@ import { sessionToken } from "../../server/auth/session";
 import { Unauthorized } from "../../domain/errors";
 import { GenerateButtons } from "../../components/generate-buttons";
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Season roadmap | Season Coach" };
+export const metadata = { title: "Season roadmap | InSeason" };
 export const maxDuration = 240;
 export default async function SeasonPage() {
   let result;

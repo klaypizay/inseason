@@ -7,9 +7,9 @@ import { Unauthorized } from "../domain/errors";
 import type { Metadata } from "next";
 import "./styles.css";
 export const metadata: Metadata = {
-  title: "Season Coach",
+  title: "InSeason",
   description:
-    "Personalized basketball season roadmaps and step-by-step practice plans for your team.",
+    "Season roadmaps and step-by-step practice plans for coaches and teams.",
 };
 export default async function RootLayout({
   children,

@@ -1,10 +1,10 @@
 # InSeason
 
-Sport-agnostic season and practice planning for coaches. Intended production domain: **InSeason.ai** (not connected or deployed).
+Sport-agnostic season and practice planning for coaches, deployed at **InSeason.ai**.
 
-This independent clone starts from basketballcoach.ing commit `566ebe2`. The inherited implementation is currently basketball-specific; the multi-sport conversion is not implemented yet. Uncommitted signup, OAuth, and player-goal changes from the basketball workspace are not included.
+This independent product began as a clone of the basketball coaching application. It now has its own GitHub repository, Vercel project, production domains, Supabase Auth project, Google OAuth callbacks, and browser-session names. Some inherited planning terminology and the production database still require separation work.
 
-Development branch: `codex/inseason`. The original repository is retained as `upstream` for fetching; its push URL is intentionally disabled. The InSeason repository is `https://github.com/klaypizay/inseason.git`, configured as `origin`.
+The InSeason repository is `https://github.com/klaypizay/inseason.git`, configured as `origin`.
 
 ## InSeason implementation scope
 
@@ -103,7 +103,7 @@ M5 now has a first practice-planning slice. Individual player goals and the rema
 
 ## Syncing with GitHub
 
-This folder is connected to the private repository [klaypizay/basketballcoach.ing](https://github.com/klaypizay/basketballcoach.ing), with local `main` tracking `origin/main`.
+This folder is connected to the private repository [klaypizay/inseason](https://github.com/klaypizay/inseason), with local `main` tracking `origin/main`.
 
 After making changes, run these commands from this project folder:
 

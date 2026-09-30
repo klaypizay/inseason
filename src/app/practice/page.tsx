@@ -4,7 +4,7 @@ import { withSession } from "../../server/db/repository";
 import { database } from "../../server/db/runtime";
 import { sessionToken } from "../../server/auth/session";
 import { Unauthorized } from "../../domain/errors";
-export const metadata = { title: "Next practice | Season Coach" };
+export const metadata = { title: "Next practice | InSeason" };
 export default async function PracticePage() {
   let next;
   try {
