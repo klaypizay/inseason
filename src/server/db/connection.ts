@@ -11,13 +11,18 @@ export function db() {
     );
     if (process.env.DATABASE_SSL === "false" && !local)
       throw new Error("TLS required");
+    const certificate = process.env.DATABASE_CA_CERT
+      ? process.env.DATABASE_CA_CERT.replace(/\\n/g, "\n")
+      : process.env.DATABASE_CA_CERT_FILE
+        ? readFileSync(process.env.DATABASE_CA_CERT_FILE, "utf8")
+        : undefined;
     connection = postgres(url, {
       ssl:
         local && process.env.DATABASE_SSL === "false"
           ? false
-          : process.env.DATABASE_CA_CERT_FILE
+          : certificate
             ? {
-                ca: readFileSync(process.env.DATABASE_CA_CERT_FILE, "utf8"),
+                ca: certificate,
                 rejectUnauthorized: true,
               }
             : "verify-full",
