@@ -10,7 +10,7 @@ import { manualWeek } from "../../../domain/week";
 import { PracticePlanner } from "../../../components/practice-planner";
 import { notionConnected } from "../../../server/notion";
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Practice plan | Season Coach" };
+export const metadata = { title: "Practice plan | InSeason" };
 export const maxDuration = 240;
 export default async function WeekPage({
   params,

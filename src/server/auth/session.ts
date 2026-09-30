@@ -4,9 +4,7 @@ import { randomBytes } from "node:crypto";
 import { database } from "../db/runtime";
 import { digest, revokeApplicationSession } from "../db/repository";
 export const cookieName =
-  process.env.NODE_ENV === "production"
-    ? "__Host-season-coach"
-    : "season-coach";
+  process.env.NODE_ENV === "production" ? "__Host-inseason" : "inseason";
 export async function sessionToken() {
   return (await cookies()).get(cookieName)?.value;
 }

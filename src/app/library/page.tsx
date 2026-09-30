@@ -5,7 +5,7 @@ import { withSession } from "../../server/db/repository";
 import { database } from "../../server/db/runtime";
 import { sessionToken } from "../../server/auth/session";
 import { Unauthorized } from "../../domain/errors";
-export const metadata = { title: "Saved plans | Season Coach" };
+export const metadata = { title: "Saved plans | InSeason" };
 export default async function LibraryPage() {
   let result;
   try {

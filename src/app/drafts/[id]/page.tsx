@@ -8,7 +8,7 @@ import { Unauthorized, NotFound } from "../../../domain/errors";
 import { DraftView } from "../../../components/draft-view";
 import { z } from "zod";
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Review season suggestions | Season Coach" };
+export const metadata = { title: "Review season suggestions | InSeason" };
 export const maxDuration = 240;
 export default async function DraftPage({
   params,

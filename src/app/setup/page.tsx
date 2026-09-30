@@ -6,7 +6,7 @@ import { withSession } from "../../server/db/repository";
 import { sessionToken } from "../../server/auth/session";
 import { SetupForm } from "../../components/setup-form";
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Team setup | Season Coach" };
+export const metadata = { title: "Team setup | InSeason" };
 export default async function SetupPage() {
   let view;
   try {

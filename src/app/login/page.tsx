@@ -1,6 +1,15 @@
 import { LoginForm } from "../../components/login-form";
-export const metadata = { title: "Sign in | Season Coach" };
-export default function Login() {
+import Link from "next/link";
+import { OAuthForm } from "../../components/oauth-form";
+
+export const metadata = { title: "Sign in | InSeason" };
+
+export default async function Login({
+  searchParams,
+}: {
+  searchParams: Promise<{ oauth?: string }>;
+}) {
+  const params = await searchParams;
   return (
     <main id="main" className="login-grid">
       <section className="intro">
@@ -11,8 +20,8 @@ export default function Login() {
         </h1>
         <p className="lede">
           Get a season outline and step-by-step practice plans built around your
-          basketball team’s goals, experience and schedule. Review, adjust and
-          head to the court with a plan.
+          team’s goals, experience and schedule. Review, adjust and head to
+          practice with a plan.
         </p>
         <div className="court" aria-hidden="true">
           <div className="circle" />
@@ -27,10 +36,18 @@ export default function Login() {
         <p className="eyebrow">WELCOME BACK, COACH</p>
         <h2>Get back to your team.</h2>
         <p>Sign in with your coach account.</p>
+        {params.oauth === "failed" && (
+          <p className="error" role="alert">
+            Google sign-in didn’t finish. Please try again in this browser, or
+            use email and password.
+          </p>
+        )}
+        <OAuthForm />
+        <p className="small">Or sign in with email</p>
         <LoginForm />
         <p className="small">
-          During this private pilot, use the coach account provided with your
-          invitation. Players and parents do not need accounts.
+          New to InSeason? <Link href="/signup">Create an account</Link>.
+          Players and parents do not need accounts.
         </p>
       </section>
     </main>

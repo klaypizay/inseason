@@ -4,7 +4,7 @@ import { signIn } from "../server/auth/actions";
 export function LoginForm() {
   const [state, action, pending] = useActionState(signIn, { error: "" });
   return (
-    <form action={action}>
+    <form action={action} aria-label="Email sign in">
       <label htmlFor="email">Email</label>
       <input
         id="email"
