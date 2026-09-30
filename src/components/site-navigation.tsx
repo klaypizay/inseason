@@ -1,117 +1,122 @@
 "use client";
+
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import type { ReactNode } from "react";
+
+export type NavigationWorkspace = {
+  complete: boolean;
+  currentId: string | null;
+  reviewId: string | null;
+  nextWeekId: string | null;
+};
+
+function NavIcon({ children }: { children: ReactNode }) {
+  return (
+    <span className="site-nav-icon" aria-hidden="true">
+      {children}
+    </span>
+  );
+}
+
 export function SiteNavigation({
   workspace,
+  folders,
 }: {
-  workspace: {
-    complete: boolean;
-    currentId: string | null;
-    reviewId: string | null;
-    nextWeekId: string | null;
-  } | null;
+  workspace: NavigationWorkspace | null;
+  folders: { id: string; name: string }[];
 }) {
   const path = usePathname();
   const section =
     path.startsWith("/roadmaps/") || path.startsWith("/drafts/")
       ? "season"
-      : path.startsWith("/weeks/")
+      : path.startsWith("/weeks/") || path.startsWith("/practice/")
         ? "practice"
         : path.slice(1);
   const roadmap = workspace?.currentId ?? workspace?.reviewId;
   const links = [
-    {
-      key: "today",
-      href: "/today",
-      label: "Start here",
-      hint: "Your next step",
-      icon: "⌂",
-    },
+    { key: "today", href: "/today", label: "Dashboard", icon: "⌂" },
     {
       key: "season",
-      href: roadmap ? "/roadmaps/" + roadmap : "/season",
+      href: roadmap ? `/roadmaps/${roadmap}` : "/season",
       label: "Season roadmap",
-      hint: workspace?.currentId
-        ? "Your weekly outline · view or edit"
-        : "What to teach throughout the season",
-      icon: "1",
+      icon: "▦",
     },
     {
       key: "practice",
       href: workspace?.nextWeekId
-        ? "/weeks/" + workspace.nextWeekId
+        ? `/weeks/${workspace.nextWeekId}`
         : "/practice",
-      label: "Next practice",
-      hint: "Activities, timing & coaching tips",
-      icon: "2",
+      label: "Practice plans",
+      icon: "▶",
     },
   ];
+
   return (
     <nav className="site-navigation" aria-label="Main navigation">
-      <p className="nav-group-label">PLAN & COACH</p>
-      {links.map((l) => (
+      <p className="nav-group-label">PLAN &amp; COACH</p>
+      {links.map((link) => (
         <Link
-          key={l.key}
-          href={l.href}
-          aria-current={section === l.key ? "page" : undefined}
+          key={link.key}
+          href={link.href}
+          aria-current={section === link.key ? "page" : undefined}
+          title={link.label}
         >
-          <span className="site-nav-icon" aria-hidden="true">
-            {l.icon}
-          </span>
-          <span>
-            <strong>{l.label}</strong>
-            <small>{l.hint}</small>
-          </span>
+          <NavIcon>{link.icon}</NavIcon>
+          <span className="nav-copy">{link.label}</span>
         </Link>
       ))}
-      <p className="nav-group-label">YOUR WORKSPACE</p>
+
+      <p className="nav-group-label">WORKSPACE</p>
       <Link
         href="/library"
         aria-current={section === "library" ? "page" : undefined}
+        title="Saved plans"
       >
-        <span>
-          <strong>Saved plans</strong>
-          <small>Roadmaps, practices & assessments</small>
-        </span>
+        <NavIcon>▤</NavIcon>
+        <span className="nav-copy">Saved plans</span>
       </Link>
       <Link
         href="/setup"
         aria-current={section === "setup" ? "page" : undefined}
+        title="Team setup"
       >
-        <span>
-          <strong>Team setup</strong>
-          <small>
-            {workspace?.complete
-              ? "Ready · edit when needed"
-              : "Complete this first"}
-          </small>
-        </span>
+        <NavIcon>◎</NavIcon>
+        <span className="nav-copy">Team setup</span>
       </Link>
-      <details className="nav-help">
-        <summary>How your plans work</summary>
-        <p>
-          Start with your team’s goals and schedule. We’ll help turn them into a
-          season outline and clear instructions for each practice.
-        </p>
-        <ol>
-          <li>
-            Review what to teach each week. Edit any week, then choose Use this
-            roadmap.
-          </li>
-          <li>
-            Build a practice with timed activities and coaching tips. Describe a
-            change in your own words or quick-edit an activity.
-          </li>
-          <li>
-            Choose Use this practice to save it for coaching. Print it or reopen
-            it on your phone from Saved plans.
-          </li>
-        </ol>
-        <p>
-          As the team changes, update Team setup. Optional assessments suggest
-          what to work on next; you decide how to adjust your roadmap.
-        </p>
-      </details>
+
+      <div className="sidebar-folders">
+        <div className="sidebar-folder-heading">
+          <p className="nav-group-label">FOLDERS</p>
+          <Link
+            href="/library"
+            aria-label="Manage folders"
+            title="Manage folders"
+          >
+            +
+          </Link>
+        </div>
+        <Link href="/library" title="All saved plans">
+          <NavIcon>◇</NavIcon>
+          <span className="nav-copy">All plans</span>
+        </Link>
+        {folders.slice(0, 8).map((folder) => (
+          <Link key={folder.id} href="/library" title={folder.name}>
+            <NavIcon>□</NavIcon>
+            <span className="nav-copy folder-name">{folder.name}</span>
+          </Link>
+        ))}
+        {folders.length > 8 && (
+          <Link
+            href="/library"
+            className="more-folders"
+            title="View all folders"
+          >
+            <NavIcon>…</NavIcon>
+            <span className="nav-copy">{folders.length - 8} more</span>
+          </Link>
+        )}
+      </div>
     </nav>
   );
 }

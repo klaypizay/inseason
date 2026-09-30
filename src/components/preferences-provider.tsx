@@ -256,11 +256,24 @@ export function PreferencesProvider({
     </Context.Provider>
   );
 }
-export function SettingsButton() {
+export function SettingsButton({
+  compact = false,
+  label = "Settings",
+}: {
+  compact?: boolean;
+  label?: string;
+} = {}) {
   const value = useContext(Context);
   return value.signedIn ? (
-    <button className="secondary" onClick={value.openSettings}>
-      Settings
+    <button
+      className={compact ? "icon-button settings-button" : "secondary"}
+      aria-label={compact ? label : undefined}
+      title={compact ? label : undefined}
+      onClick={value.openSettings}
+    >
+      <span aria-hidden={compact ? "true" : undefined}>
+        {compact ? "⚙" : "Settings"}
+      </span>
     </button>
   ) : null;
 }
