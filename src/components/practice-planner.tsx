@@ -65,10 +65,9 @@ export function PracticePlanner({
   const context = initial.version?.context ?? initial.context;
   const session = context.sessions.find((s) => s.id === selected),
     plan = content.practices?.find((p) => p.sessionId === selected);
+  const savedPlan = seed.practices?.find((p) => p.sessionId === selected);
   const block = plan?.blocks.find((b) => b.id === editing);
-  const savedBlock = seed.practices
-    ?.find((p) => p.sessionId === selected)
-    ?.blocks.find((b) => b.id === editing);
+  const savedBlock = savedPlan?.blocks.find((b) => b.id === editing);
   const drillLocked = !!(block?.locked || savedBlock?.locked);
   const run = initial.runs.find(
     (r) => r.status === "queued" || r.status === "running",
@@ -470,6 +469,9 @@ export function PracticePlanner({
                     const from = plan.blocks
                       .slice(0, index)
                       .reduce((n, x) => n + x.minutes, 0);
+                    const savedDurationLocked = !!savedPlan?.blocks.find(
+                      (saved) => saved.id === b.id && saved.locked,
+                    );
                     return (
                       <li
                         key={b.id}
@@ -552,6 +554,45 @@ export function PracticePlanner({
                             </p>
                             <h3>{b.title}</h3>
                             <p>{b.cues}</p>
+                            {editable && (
+                              <label className="practice-duration-edit no-print">
+                                Duration
+                                <span>
+                                  <input
+                                    type="number"
+                                    min={1}
+                                    max={session.minutes}
+                                    value={b.minutes}
+                                    disabled={
+                                      pending ||
+                                      !!run ||
+                                      b.locked ||
+                                      savedDurationLocked
+                                    }
+                                    aria-label={`${b.title} duration in minutes`}
+                                    onChange={(event) => {
+                                      const minutes = Number(
+                                        event.target.value,
+                                      );
+                                      if (
+                                        !Number.isInteger(minutes) ||
+                                        minutes < 1
+                                      )
+                                        return;
+                                      changePlan({
+                                        ...plan,
+                                        blocks: plan.blocks.map((item) =>
+                                          item.id === b.id
+                                            ? { ...item, minutes }
+                                            : item,
+                                        ),
+                                      });
+                                    }}
+                                  />
+                                  min
+                                </span>
+                              </label>
+                            )}
                           </div>
                           {editable && (
                             <button
