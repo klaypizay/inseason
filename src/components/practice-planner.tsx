@@ -4,7 +4,7 @@ import { useWeekGeneration } from "./use-week-generation";
 import { useEffect, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { type WeekContent, type WeekView } from "../domain/week";
-import type { PracticePlan } from "../domain/practice";
+import { reorderPracticeBlocks, type PracticePlan } from "../domain/practice";
 import { beginWeek, saveWeek } from "../server/week/actions";
 import { useDateFormat, useTimeFormat } from "./preferences-provider";
 import { WeekEditor } from "./week-editor";
@@ -32,6 +32,7 @@ export function PracticePlanner({
   } | null;
 }) {
   const query = useSearchParams();
+  const notionStatus = query.get("notion");
   const time = useTimeFormat();
   const router = useRouter(),
     date = useDateFormat();
@@ -56,6 +57,10 @@ export function PracticePlanner({
     [generating, setGenerating] = useState(false),
     [advanced, setAdvanced] = useState(query.get("advanced") === "1"),
     [notionBusy, setNotionBusy] = useState(false),
+    [viewMode, setViewMode] = useState<
+      "flow" | "table" | "condensed" | "detailed"
+    >("flow"),
+    [dragging, setDragging] = useState<string | null>(null),
     [pending, start] = useTransition();
   const context = initial.version?.context ?? initial.context;
   const session = context.sessions.find((s) => s.id === selected),
@@ -135,6 +140,19 @@ export function PracticePlanner({
     });
     setEditing(id);
     setEditTab("manual");
+  }
+  function moveBlock(blockId: string, toIndex: number) {
+    if (!plan) return;
+    try {
+      changePlan(reorderPracticeBlocks(plan, blockId, toIndex));
+      setError("");
+    } catch (moveError) {
+      setError(
+        moveError instanceof Error
+          ? moveError.message
+          : "This drill could not be moved.",
+      );
+    }
   }
   function action(
     work: () => Promise<{ id?: string; error?: string }>,
@@ -228,6 +246,17 @@ export function PracticePlanner({
       {notice && (
         <p className="journey-notice" role="status">
           {notice}
+        </p>
+      )}
+      {notionStatus === "connected" && (
+        <p className="journey-notice" role="status">
+          Notion is connected. Choose Export to Notion after saving this
+          practice.
+        </p>
+      )}
+      {notionStatus === "unavailable" && (
+        <p className="error" role="alert">
+          Notion export is not configured for this environment.
         </p>
       )}
       {initial.stale && (
@@ -369,87 +398,243 @@ export function PracticePlanner({
                   before saving.
                 </p>
               )}
-              <ol className="practice-timeline" aria-label="Practice flow">
-                {plan.blocks.map((b, index) => {
-                  const from = plan.blocks
-                    .slice(0, index)
-                    .reduce((n, x) => n + x.minutes, 0);
-                  return (
-                    <li key={b.id} className="card practice-block">
-                      <div className="practice-block-title">
-                        <span className="practice-time">
-                          {from}–{from + b.minutes}
-                          <small>minutes</small>
-                        </span>
-                        <div>
-                          <p className="practice-step">
-                            {index + 1} of {plan.blocks.length}
-                          </p>
-                          <h3>{b.title}</h3>
-                          <p>{b.cues}</p>
+              <div className="practice-view-toolbar no-print">
+                <div>
+                  <strong>View and print</strong>
+                  <span>Choose the amount of detail you need.</span>
+                </div>
+                <div
+                  className="practice-view-options"
+                  role="group"
+                  aria-label="Practice view"
+                >
+                  {(["flow", "table", "condensed", "detailed"] as const).map(
+                    (mode) => (
+                      <button
+                        key={mode}
+                        type="button"
+                        className={viewMode === mode ? "" : "secondary"}
+                        aria-pressed={viewMode === mode}
+                        onClick={() => setViewMode(mode)}
+                      >
+                        {mode[0].toUpperCase() + mode.slice(1)}
+                      </button>
+                    ),
+                  )}
+                </div>
+                {editable && (
+                  <p className="small">
+                    Drag drills to reorder, or use the arrow buttons. Unlock
+                    saved drills before moving them.
+                  </p>
+                )}
+              </div>
+              {viewMode === "table" ? (
+                <div className="practice-table-wrap">
+                  <table className="practice-table">
+                    <thead>
+                      <tr>
+                        <th>Time</th>
+                        <th>Activity</th>
+                        <th>Coaching focus</th>
+                        <th>Setup</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {plan.blocks.map((block, index) => {
+                        const from = plan.blocks
+                          .slice(0, index)
+                          .reduce((sum, item) => sum + item.minutes, 0);
+                        return (
+                          <tr key={block.id}>
+                            <td>
+                              {from}–{from + block.minutes} min
+                            </td>
+                            <td>
+                              <strong>{block.title}</strong>
+                            </td>
+                            <td>{block.cues}</td>
+                            <td>{block.setup}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <ol
+                  className={`practice-timeline practice-view-${viewMode}`}
+                  aria-label="Practice flow"
+                >
+                  {plan.blocks.map((b, index) => {
+                    const from = plan.blocks
+                      .slice(0, index)
+                      .reduce((n, x) => n + x.minutes, 0);
+                    return (
+                      <li
+                        key={b.id}
+                        className={`card practice-block${dragging === b.id ? " dragging" : ""}`}
+                        onDragOver={(event) => event.preventDefault()}
+                        onDrop={(event) => {
+                          event.preventDefault();
+                          const moving =
+                            dragging ||
+                            event.dataTransfer.getData("text/plain");
+                          if (moving && moving !== b.id)
+                            moveBlock(moving, index);
+                          setDragging(null);
+                        }}
+                      >
+                        <div className="practice-block-title">
+                          {editable && (
+                            <div
+                              className="drill-order-controls no-print"
+                              aria-label={`Reorder ${b.title}`}
+                            >
+                              <span
+                                className="drag-handle"
+                                aria-hidden="true"
+                                draggable={
+                                  editable &&
+                                  !pending &&
+                                  !run &&
+                                  !plan.blocks.some((item) => item.locked)
+                                }
+                                onDragStart={(event) => {
+                                  event.dataTransfer.effectAllowed = "move";
+                                  event.dataTransfer.setData(
+                                    "text/plain",
+                                    b.id,
+                                  );
+                                  setDragging(b.id);
+                                }}
+                                onDragEnd={() => setDragging(null)}
+                              >
+                                ⠿
+                              </span>
+                              <button
+                                type="button"
+                                className="icon-button"
+                                disabled={
+                                  pending ||
+                                  !!run ||
+                                  index === 0 ||
+                                  plan.blocks.some((item) => item.locked)
+                                }
+                                aria-label={`Move ${b.title} earlier`}
+                                onClick={() => moveBlock(b.id, index - 1)}
+                              >
+                                ↑
+                              </button>
+                              <button
+                                type="button"
+                                className="icon-button"
+                                disabled={
+                                  pending ||
+                                  !!run ||
+                                  index === plan.blocks.length - 1 ||
+                                  plan.blocks.some((item) => item.locked)
+                                }
+                                aria-label={`Move ${b.title} later`}
+                                onClick={() => moveBlock(b.id, index + 1)}
+                              >
+                                ↓
+                              </button>
+                            </div>
+                          )}
+                          <span className="practice-time">
+                            {from}–{from + b.minutes}
+                            <small>minutes</small>
+                          </span>
+                          <div>
+                            <p className="practice-step">
+                              {index + 1} of {plan.blocks.length}
+                            </p>
+                            <h3>{b.title}</h3>
+                            <p>{b.cues}</p>
+                          </div>
+                          {editable && (
+                            <button
+                              className="secondary no-print"
+                              disabled={pending || !!run}
+                              onClick={() => {
+                                setEditing(b.id);
+                                setEditTab("manual");
+                                setDrillBrief("");
+                                setError("");
+                              }}
+                            >
+                              Quick edit
+                            </button>
+                          )}
                         </div>
-                        {editable && (
-                          <button
-                            className="secondary no-print"
-                            disabled={pending || !!run}
-                            onClick={() => {
-                              setEditing(b.id);
-                              setEditTab("manual");
-                              setDrillBrief("");
-                              setError("");
-                            }}
-                          >
-                            Quick edit
-                          </button>
+                        <div className="practice-drill-lock no-print">
+                          <label className="check" htmlFor={b.id + "-lock"}>
+                            <input
+                              id={b.id + "-lock"}
+                              type="checkbox"
+                              checked={b.locked}
+                              disabled={!editable || pending || !!run}
+                              aria-describedby={b.id + "-lock-help"}
+                              onChange={(e) =>
+                                changePlan({
+                                  ...plan,
+                                  blocks: plan.blocks.map((item) =>
+                                    item.id === b.id
+                                      ? { ...item, locked: e.target.checked }
+                                      : item,
+                                  ),
+                                })
+                              }
+                            />
+                            Lock this drill
+                          </label>
+                          <p className="small" id={b.id + "-lock-help"}>
+                            A regenerated practice plan will not affect this
+                            drill.
+                          </p>
+                        </div>
+                        {viewMode === "flow" && (
+                          <details>
+                            <summary>
+                              How to run it{b.locked ? " · Locked" : ""}
+                            </summary>
+                            <p>
+                              <strong>Set up:</strong> {b.setup}
+                            </p>
+                            <p>
+                              <strong>Make it easier:</strong> {b.simpler}
+                            </p>
+                            <p>
+                              <strong>Why it helps:</strong> {b.purpose}
+                            </p>
+                            <p className="small">
+                              Needs {b.players} players · {b.hoops} hoops
+                            </p>
+                          </details>
                         )}
-                      </div>
-                      <div className="practice-drill-lock no-print">
-                        <label className="check" htmlFor={b.id + "-lock"}>
-                          <input
-                            id={b.id + "-lock"}
-                            type="checkbox"
-                            checked={b.locked}
-                            disabled={!editable || pending || !!run}
-                            aria-describedby={b.id + "-lock-help"}
-                            onChange={(e) =>
-                              changePlan({
-                                ...plan,
-                                blocks: plan.blocks.map((item) =>
-                                  item.id === b.id
-                                    ? { ...item, locked: e.target.checked }
-                                    : item,
-                                ),
-                              })
-                            }
-                          />
-                          Lock this drill
-                        </label>
-                        <p className="small" id={b.id + "-lock-help"}>
-                          A regenerated practice plan will not affect this
-                          drill.
-                        </p>
-                      </div>
-                      <details>
-                        <summary>
-                          How to run it{b.locked ? " · Locked" : ""}
-                        </summary>
-                        <p>
-                          <strong>Set up:</strong> {b.setup}
-                        </p>
-                        <p>
-                          <strong>Make it easier:</strong> {b.simpler}
-                        </p>
-                        <p>
-                          <strong>Why it helps:</strong> {b.purpose}
-                        </p>
-                        <p className="small">
-                          Needs {b.players} players · {b.hoops} hoops
-                        </p>
-                      </details>
-                    </li>
-                  );
-                })}
-              </ol>
+                        {viewMode === "detailed" && (
+                          <div className="practice-details">
+                            <p>
+                              <strong>Set up:</strong> {b.setup}
+                            </p>
+                            <p>
+                              <strong>Make it easier:</strong> {b.simpler}
+                            </p>
+                            <p>
+                              <strong>Why it helps:</strong> {b.purpose}
+                            </p>
+                            <p className="small">
+                              Needs {b.players} players
+                              {b.hoops ? ` · ${b.hoops} hoops` : ""}
+                            </p>
+                          </div>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ol>
+              )}
               <div className="save-bar button-row no-print">
                 {editable && (
                   <>
