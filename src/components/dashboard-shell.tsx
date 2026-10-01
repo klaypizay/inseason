@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import { SettingsButton } from "./preferences-provider";
 import { SiteNavigation, type NavigationWorkspace } from "./site-navigation";
+import { signOut } from "../server/auth/actions";
 
 function sectionFor(path: string) {
   if (path.startsWith("/roadmaps/") || path.startsWith("/drafts/"))
@@ -74,6 +75,29 @@ export function DashboardShell({
           </button>
         </div>
         <SiteNavigation workspace={workspace} folders={folders} />
+        <div className="sidebar-footer">
+          <div className="sidebar-ai-card">
+            <span className="nav-copy">
+              <strong>AI coach</strong>
+              <small>What do you want help planning?</small>
+            </span>
+            <Link
+              href={
+                workspace?.nextWeekId
+                  ? `/weeks/${workspace.nextWeekId}`
+                  : "/season"
+              }
+            >
+              Ask AI coach
+            </Link>
+          </div>
+          <SettingsButton />
+          <form action={signOut}>
+            <button className="sidebar-signout" type="submit">
+              Sign out
+            </button>
+          </form>
+        </div>
       </aside>
 
       <div className="dashboard-stage">
@@ -91,7 +115,10 @@ export function DashboardShell({
             >
               <span aria-hidden="true">☰</span>
             </button>
-            <span className="toolbar-section">{sectionFor(path)}</span>
+            <div className="toolbar-greeting">
+              <span className="toolbar-section">{sectionFor(path)}</span>
+              <small>Good to see you, {displayName || "Coach"}.</small>
+            </div>
             <nav className="toolbar-links" aria-label="Quick navigation">
               <Link href="/today">Today</Link>
               <Link
@@ -115,7 +142,18 @@ export function DashboardShell({
             </nav>
           </div>
           <div className="toolbar-actions">
-            <span className="toolbar-status">Plan ready</span>
+            <Link
+              className="toolbar-primary"
+              href={
+                workspace?.nextWeekId
+                  ? `/weeks/${workspace.nextWeekId}`
+                  : workspace?.complete
+                    ? "/season"
+                    : "/setup"
+              }
+            >
+              Plan next practice
+            </Link>
             <SettingsButton compact />
             <span className="account-avatar" aria-hidden="true">
               {initials || "C"}
