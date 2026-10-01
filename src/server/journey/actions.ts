@@ -111,19 +111,17 @@ export async function createStarterJourney(input: unknown): Promise<{
     const seasonId = saved.data.seasonId!;
     const provider = configuredProvider();
     const run = await withSession(database, token, (repo) =>
-      repo
-        .planning()
-        .begin(
-          {
-            teamId,
-            seasonId,
-            action: "draftRoadmap",
-            idempotencyKey: randomUUID(),
-          },
-          provider.name,
-          provider.model,
-          dailyQuota(),
-        ),
+      repo.planning().begin(
+        {
+          teamId,
+          seasonId,
+          action: "draftRoadmap",
+          idempotencyKey: randomUUID(),
+        },
+        provider.name,
+        provider.model,
+        dailyQuota(),
+      ),
     );
     await executeSeason(database, token, run.id, provider);
     const generated = await withSession(database, token, (repo) =>
