@@ -24,8 +24,44 @@ import {
 } from "../src/server/ai/week-provider";
 import { generateSeason } from "../src/server/ai/generate-season";
 import { executeWeek } from "../src/server/ai/generate-week";
-import { practiceIntentSchema } from "../src/domain/practice";
+import {
+  practiceIntentSchema,
+  reorderPracticeBlocks,
+} from "../src/domain/practice";
 let pg: PGlite, db: Database;
+
+it("reorders unlocked practice drills and protects locked positions", () => {
+  const block = (title: string, locked = false) => ({
+    id: randomUUID(),
+    title,
+    minutes: 10,
+    setup: "Use the available space.",
+    cues: "Keep the coaching point simple.",
+    simpler: "Reduce the distance.",
+    purpose: "Practice the weekly focus.",
+    players: 4,
+    hoops: 0,
+    locked,
+  });
+  const first = block("Warm up"),
+    second = block("Skill"),
+    third = block("Game");
+  const plan = {
+    sessionId: randomUUID(),
+    title: "Practice",
+    blocks: [first, second, third],
+  };
+  expect(
+    reorderPracticeBlocks(plan, first.id, 2).blocks.map((item) => item.title),
+  ).toEqual(["Skill", "Game", "Warm up"]);
+  expect(() =>
+    reorderPracticeBlocks(
+      { ...plan, blocks: [first, { ...second, locked: true }, third] },
+      first.id,
+      2,
+    ),
+  ).toThrow("Unlock saved drills");
+});
 beforeAll(async () => {
   pg = new PGlite();
   await pg.exec(

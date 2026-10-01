@@ -2312,6 +2312,65 @@ textarea:disabled {
   list-style: none;
   padding: 0;
 }
+.practice-view-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 24px;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--paper);
+}
+.practice-view-toolbar > div:first-child {
+  display: grid;
+  gap: 2px;
+}
+.practice-view-toolbar span,
+.practice-view-toolbar p {
+  color: var(--muted);
+}
+.practice-view-toolbar p {
+  flex-basis: 100%;
+  margin: 0;
+}
+.practice-view-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.practice-view-options button {
+  padding: 8px 12px;
+}
+.practice-table-wrap {
+  overflow-x: auto;
+  margin-bottom: 18px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+.practice-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--paper);
+  font-size: 14px;
+}
+.practice-table th,
+.practice-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+.practice-table th {
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.practice-table tr:last-child td {
+  border-bottom: 0;
+}
 .practice-step {
   margin: 0 0 4px !important;
   color: #687970;
@@ -2336,6 +2395,36 @@ textarea:disabled {
 }
 .practice-block-title > div {
   flex: 1;
+}
+.practice-block-title .drill-order-controls {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 3px;
+}
+.drill-order-controls .icon-button {
+  width: 28px;
+  height: 28px;
+}
+.drag-handle {
+  padding: 3px;
+  color: var(--muted);
+  cursor: grab;
+  font-size: 20px;
+}
+.practice-block.dragging {
+  opacity: 0.45;
+  border-style: dashed;
+}
+.practice-details {
+  margin: 12px 0 0 86px;
+  font-size: 14px;
+}
+.practice-view-condensed .practice-block {
+  padding: 12px 14px;
+}
+.practice-view-condensed .practice-drill-lock {
+  display: none;
 }
 .practice-block-title h3 {
   margin: 0;
@@ -2393,7 +2482,8 @@ textarea:disabled {
     margin-left: 78px;
   }
   .practice-block details,
-  .practice-drill-lock {
+  .practice-drill-lock,
+  .practice-details {
     margin-left: 0;
   }
   .practice-plan-heading {
@@ -2414,15 +2504,20 @@ textarea:disabled {
   }
   .practice-block-title {
     display: grid;
-    grid-template-columns: 62px minmax(0, 1fr);
+    grid-template-columns: auto 62px minmax(0, 1fr);
     gap: 12px;
   }
   .practice-block-title button {
-    grid-column: 2;
+    grid-column: 3;
     justify-self: start;
   }
+  .practice-block-title .drill-order-controls {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+  }
   .practice-block details,
-  .practice-drill-lock {
+  .practice-drill-lock,
+  .practice-details {
     margin-left: 74px;
   }
 }
@@ -2480,5 +2575,16 @@ textarea:disabled {
   }
   .practice-summary {
     margin: 8px 0;
+  }
+  .practice-table-wrap {
+    overflow: visible;
+    border-color: #bbb;
+  }
+  .practice-table {
+    font-size: 9.5pt;
+  }
+  .practice-table th,
+  .practice-table td {
+    padding: 7px 8px;
   }
 }

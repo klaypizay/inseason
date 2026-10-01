@@ -20,6 +20,23 @@ export const practiceSchema = z.strictObject({
   blocks: z.array(practiceBlockSchema).min(1).max(10),
 });
 export type PracticePlan = z.infer<typeof practiceSchema>;
+export function reorderPracticeBlocks(
+  plan: PracticePlan,
+  blockId: string,
+  toIndex: number,
+) {
+  const fromIndex = plan.blocks.findIndex((block) => block.id === blockId);
+  if (fromIndex < 0)
+    throw new PlanRuleError("Choose a drill from this practice.");
+  if (plan.blocks.some((block) => block.locked))
+    throw new PlanRuleError(
+      "Unlock saved drills before reordering the practice.",
+    );
+  const next = [...plan.blocks];
+  const [moving] = next.splice(fromIndex, 1);
+  next.splice(Math.max(0, Math.min(toIndex, next.length)), 0, moving);
+  return { ...plan, blocks: next };
+}
 export const practiceIntentSchema = z
   .strictObject({
     sessionId: z.uuid(),
