@@ -17,26 +17,43 @@ export default async function WeekPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ version?: string; session?: string }>;
+  searchParams: Promise<{
+    version?: string;
+    session?: string;
+    notice?: string;
+  }>;
 }) {
   const { id } = await params,
-    { version, session } = await searchParams;
+    { version, session, notice } = await searchParams;
   if (
     !z.uuid().safeParse(id).success ||
     (version && !z.uuid().safeParse(version).success) ||
     (session && !z.uuid().safeParse(session).success)
   )
     notFound();
-  let view;
+  let result;
   try {
-    view = await withSession(database, await sessionToken(), (r) =>
-      r.week().get(id, version),
-    );
+    result = await withSession(database, await sessionToken(), async (r) => {
+      const view = await r.week().get(id, version);
+      const roadmap = await r.roadmap().get(view.context.roadmapId);
+      const current =
+        roadmap.version.plan.sessions.find((item) => item.id === session) ??
+        view.context.sessions[0];
+      const nextPractice = roadmap.version.plan.sessions
+        .filter(
+          (item) =>
+            item.status === "scheduled" &&
+            (!current || item.date + item.time > current.date + current.time),
+        )
+        .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time))[0];
+      return { view, nextPractice };
+    });
   } catch (e) {
     if (e instanceof Unauthorized) redirect("/login");
     if (e instanceof NotFound) notFound();
     throw e;
   }
+  const { view, nextPractice } = result;
   return (
     <main id="main">
       <Link href={"/roadmaps/" + view.context.roadmapId}>← Season roadmap</Link>
@@ -51,6 +68,17 @@ export default async function WeekPage({
         selectedSession={session}
         seed={view.version?.content ?? manualWeek(view.context, randomUUID)}
         notionConnected={await notionConnected()}
+        notice={notice?.slice(0, 240)}
+        nextPractice={
+          nextPractice
+            ? {
+                weekId: nextPractice.weekId,
+                sessionId: nextPractice.id,
+                date: nextPractice.date,
+                time: nextPractice.time,
+              }
+            : null
+        }
       />
     </main>
   );

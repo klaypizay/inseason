@@ -4,151 +4,266 @@ import { Unauthorized } from "../../domain/errors";
 import { database } from "../../server/db/runtime";
 import { withSession } from "../../server/db/repository";
 import { sessionToken } from "../../server/auth/session";
-import { signOut } from "../../server/auth/actions";
 import {
   DisplayDate,
   DisplayTime,
 } from "../../components/preferences-provider";
+
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Start here | InSeason" };
+export const metadata = { title: "Dashboard | InSeason" };
+
 export default async function Today() {
   let result;
   try {
-    result = await withSession(database, await sessionToken(), async (r) => {
-      const setup = await r.onboarding().load();
-      return {
-        setup,
-        roadmap: setup.data.seasonId
-          ? await r.roadmap().summary(setup.data.seasonId)
-          : null,
-      };
+    result = await withSession(database, await sessionToken(), async (repo) => {
+      const setup = await repo.onboarding().load();
+      const summary = setup.data.seasonId
+        ? await repo.roadmap().summary(setup.data.seasonId)
+        : null;
+      const roadmap = summary?.currentId
+        ? await repo.roadmap().get(summary.currentId)
+        : null;
+      return { setup, summary, roadmap };
     });
-  } catch (e) {
-    if (e instanceof Unauthorized) redirect("/login");
-    throw e;
+  } catch (error) {
+    if (error instanceof Unauthorized) redirect("/login");
+    throw error;
   }
-  const { setup, roadmap } = result;
-  const href = !setup.data.complete
-    ? "/setup"
-    : !roadmap?.currentId
-      ? roadmap?.reviewId
-        ? "/roadmaps/" + roadmap.reviewId
-        : "/season"
-      : roadmap.nextWeekId
-        ? "/weeks/" + roadmap.nextWeekId
-        : "/season";
-  return (
-    <main id="main">
-      <div className="toolbar">
-        <p className="eyebrow">START HERE</p>
-        <form action={signOut}>
-          <button className="secondary">Sign out</button>
-        </form>
-      </div>
-      <p className="small">
-        {setup.data.teamName || "Your coaching workspace"}
-      </p>
-      <h1>
-        {roadmap?.currentId
-          ? "Let’s get your next practice ready."
-          : "A simple plan. More time to coach."}
-      </h1>
-      <p className="lede">
-        Turn your team’s goals, experience and schedule into a season outline
-        and practices you can take straight to the court. You choose what fits
-        and can adjust your plans as the season unfolds.
-      </p>
-      <section className="card next-step">
-        <p className="eyebrow">YOUR NEXT STEP</p>
-        <h2>
-          {!setup.data.complete
-            ? "Finish team setup"
-            : !roadmap?.currentId
-              ? roadmap?.reviewId
-                ? "Review your saved roadmap"
-                : "Create your season roadmap"
-              : roadmap.nextSession
-                ? "Prepare your next practice"
-                : "Review your season"}
-        </h2>
-        {roadmap?.nextSession && (
-          <p>
-            <DisplayDate value={roadmap.nextSession.date} /> ·{" "}
-            <DisplayTime value={roadmap.nextSession.time} /> ·{" "}
-            {roadmap.nextSession.minutes} minutes
-          </p>
-        )}
-        <p>
-          {!setup.data.complete
-            ? "Tell us about your team, goals, season dates and practice time. We’ll use those details to build your season outline. It’s okay if you don’t have every answer yet."
-            : !roadmap?.currentId
-              ? "Get a week-by-week outline of what to teach and what progress to look for. Scan it, edit any week, then choose Use this roadmap to start planning practices."
-              : roadmap.nextSession
-                ? "Turn your next week’s focus into timed activities, setup instructions and reminders for what to say or demonstrate. Ask for changes in your own words or quick-edit an activity."
-                : "No upcoming practice is scheduled. Check your calendar or revisit saved plans."}
+  const { setup, summary, roadmap } = result;
+  if (!setup.data.complete) {
+    return (
+      <main id="main" className="dashboard-home onboarding-home">
+        <p className="eyebrow">WELCOME TO INSEASON</p>
+        <h1>Your first practice starts with four quick answers.</h1>
+        <p className="lede">
+          Tell us who you coach, what matters most and when you practice. We’ll
+          create a starter roadmap and take you directly to Practice 1.
         </p>
-        <Link className="button-link" href={href}>
-          {!setup.data.complete
-            ? "Continue setup"
-            : !roadmap?.currentId
-              ? "Plan my season"
-              : roadmap.nextWeekId
-                ? "Plan next practice"
-                : "Open season"}{" "}
-          →
+        <Link className="button-link action-button" href="/setup">
+          Start my plan →
+        </Link>
+        <div className="onboarding-promise">
+          <span>
+            <strong>1</strong> Team
+          </span>
+          <span>
+            <strong>2</strong> Experience
+          </span>
+          <span>
+            <strong>3</strong> Goal
+          </span>
+          <span>
+            <strong>4</strong> Practice
+          </span>
+        </div>
+      </main>
+    );
+  }
+  const plan = roadmap?.version.plan;
+  const today = roadmap?.today;
+  const currentWeek =
+    plan?.weeks.find(
+      (week) => today && week.start <= today && week.end >= today,
+    ) ?? plan?.weeks.find((week) => !today || week.end >= today);
+  const next = summary?.nextSession;
+  const nextHref = summary?.nextWeekId
+    ? `/weeks/${summary.nextWeekId}${next ? `?session=${next.id}` : ""}`
+    : "/season";
+  const weekSessions = currentWeek
+    ? (plan?.sessions.filter(
+        (session) =>
+          session.weekId === currentWeek.id && session.status !== "canceled",
+      ) ?? [])
+    : [];
+  return (
+    <main id="main" className="dashboard-home">
+      <header className="dashboard-page-heading">
+        <div>
+          <p className="eyebrow">COACHING DASHBOARD</p>
+          <h1>Your next coaching decision.</h1>
+          <p className="lede">
+            See what matters this week, prepare the next practice and keep the
+            season connected.
+          </p>
+        </div>
+        <Link
+          className="button-link action-button mobile-primary"
+          href={nextHref}
+        >
+          {next ? "Plan next practice" : "Open season"}
+        </Link>
+      </header>
+      <section className="season-context-strip" aria-label="Season context">
+        <Link href="/season" className="context-card">
+          <span>SEASON</span>
+          <strong>{setup.data.title}</strong>
+          <small>
+            {plan ? `${plan.weeks.length} teaching weeks` : "Starter roadmap"}
+          </small>
+        </Link>
+        <Link
+          href={roadmap ? `/roadmaps/${roadmap.version.id}` : "/season"}
+          className="context-card"
+        >
+          <span>THIS WEEK</span>
+          <strong>{currentWeek?.emphasis ?? "Choose this week’s focus"}</strong>
+          <small>
+            {currentWeek ? (
+              <>
+                <DisplayDate value={currentWeek.start} /> –{" "}
+                <DisplayDate value={currentWeek.end} />
+              </>
+            ) : (
+              "Not scheduled"
+            )}
+          </small>
+        </Link>
+        <Link href="/setup" className="context-card">
+          <span>TEAM</span>
+          <strong>{setup.data.teamName}</strong>
+          <small>
+            {setup.data.reports.ageBand || "Age not recorded"} ·{" "}
+            {setup.data.playerCount ?? "?"} players
+          </small>
+        </Link>
+        <Link href={nextHref} className="context-card context-card-accent">
+          <span>NEXT PRACTICE</span>
+          <strong>
+            {next ? <DisplayDate value={next.date} /> : "Not scheduled"}
+          </strong>
+          <small>
+            {next ? (
+              <>
+                <DisplayTime value={next.time} /> · {next.minutes} minutes
+              </>
+            ) : (
+              "Review the roadmap calendar"
+            )}
+          </small>
         </Link>
       </section>
-      <div className="quick-path">
-        <Link href="/season">
-          <strong>1 · Season roadmap</strong>
-          <span>A week-by-week outline built around your team’s goals.</span>
-        </Link>
-        <Link href="/practice">
-          <strong>2 · Next practice</strong>
-          <span>Timed activities and instructions for your next session.</span>
-        </Link>
-        <Link href="/library">
-          <strong>Saved plans</strong>
-          <span>Reopen your roadmaps, practices and team assessments.</span>
-        </Link>
+      <div className="dashboard-focus-grid">
+        <section>
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">THIS WEEK</p>
+              <h2>
+                {currentWeek?.emphasis ??
+                  "Build the week around your starter goal"}
+              </h2>
+            </div>
+            {roadmap && (
+              <Link href={`/roadmaps/${roadmap.version.id}`}>
+                View roadmap →
+              </Link>
+            )}
+          </div>
+          <div className="week-summary-grid">
+            <article className="compact-card">
+              <span className="card-icon">◎</span>
+              <div>
+                <strong>What to work on</strong>
+                <p>{currentWeek?.emphasis ?? setup.data.reports.goals}</p>
+              </div>
+            </article>
+            <article className="compact-card">
+              <span className="card-icon">✓</span>
+              <div>
+                <strong>What to look for</strong>
+                <p>
+                  {currentWeek?.checkpoint ??
+                    "Notice what players can explain and repeat with confidence."}
+                </p>
+              </div>
+            </article>
+            <article className="compact-card">
+              <span className="card-icon">◷</span>
+              <div>
+                <strong>Scheduled sessions</strong>
+                <p>
+                  {weekSessions.length
+                    ? `${weekSessions.length} practice${weekSessions.length === 1 ? "" : "s"} this week`
+                    : "No practice recorded this week"}
+                </p>
+              </div>
+            </article>
+            <article className="compact-card">
+              <span className="card-icon">◇</span>
+              <div>
+                <strong>Known constraints</strong>
+                <p>
+                  {setup.data.playerCount ?? "Not recorded"} players ·{" "}
+                  {setup.data.reports.teamType === "Basketball"
+                    ? `${setup.data.hoops ?? "Not recorded"} hoops · `
+                    : ""}
+                  {setup.data.court.replaceAll("_", " ")}
+                </p>
+              </div>
+            </article>
+          </div>
+        </section>
+        <aside className="next-practice-card">
+          <p className="eyebrow">NEXT PRACTICE</p>
+          <h2>
+            {next ? <DisplayDate value={next.date} /> : "No practice scheduled"}
+          </h2>
+          {next && (
+            <p className="practice-meta">
+              <DisplayTime value={next.time} /> · {next.minutes} minutes
+            </p>
+          )}
+          <p>
+            {currentWeek?.emphasis ??
+              "Connect the next practice to your season goal."}
+          </p>
+          <span className="status-badge">
+            {next ? "Draft or ready to plan" : "Needs schedule"}
+          </span>
+          <Link className="button-link action-button" href={nextHref}>
+            {next ? "Plan next practice" : "Review schedule"}
+          </Link>
+        </aside>
       </div>
-      <details className="planning-disclosure">
-        <summary>First time here? A one-minute guide</summary>
-        <ol>
-          <li>
-            <strong>Build an outline for your entire season.</strong> We use
-            your team’s goals, ages, experience, schedule and available
-            equipment to suggest what to teach each week and what progress to
-            look for. This becomes a roadmap for you and your team.
-          </li>
-          <li>
-            <strong>Make the roadmap yours.</strong> Scan the weeks and edit
-            anything that doesn’t fit. Choose <strong>Use this roadmap</strong>{" "}
-            when you’re ready. A draft is saved for review; the roadmap in use
-            is the one your practice planning follows.
-          </li>
-          <li>
-            <strong>Let us design your next practice.</strong> Choose a
-            scheduled practice and get timed activities, setup instructions,
-            coaching reminders and ways to make activities easier, based on your
-            roadmap and team setup. Describe any changes you want in your own
-            words, or quick-edit an activity. Then save it for coaching and
-            print it or open it on your phone.
-          </li>
-          <li>
-            <strong>Adjust as your team grows.</strong> Update your team notes
-            as you learn what works. An optional team assessment helps you
-            identify strengths, areas to work on and possible goals. Use that
-            advice to edit your roadmap or create a fresh draft. You choose when
-            an updated plan replaces the one you use.
-          </li>
-        </ol>
-        <p>
-          You don’t need to be an experienced coach or plan every practice
-          today. Start with one season outline and one practice. Your saved
-          plans are there to revisit throughout the season.
-        </p>
-      </details>
+      <section className="dashboard-lower-grid">
+        <article className="card">
+          <p className="eyebrow">TEAM PULSE</p>
+          <h2>What you know so far</h2>
+          <p>
+            {setup.data.reports.strengths ||
+              "No recent observation recorded. Add what worked after Practice 1."}
+          </p>
+          <p className="small">
+            Coach-entered context ·{" "}
+            {setup.data.reports.strengths ? "Known" : "Not recorded"}
+          </p>
+          <Link href="/setup">Add an observation →</Link>
+        </article>
+        <article className="card adjustment-card">
+          <p className="eyebrow">SUGGESTED ADJUSTMENT</p>
+          <h2>Keep the first plan simple.</h2>
+          <div className="adjustment-grid">
+            <span>
+              <strong>Keep</strong>Your main team goal
+            </span>
+            <span>
+              <strong>Reinforce</strong>This week’s focus
+            </span>
+            <span>
+              <strong>Watch</strong>What players can repeat
+            </span>
+            <span>
+              <strong>Later</strong>Extra detail that can wait
+            </span>
+          </div>
+          <details>
+            <summary>Based on…</summary>
+            <p>
+              Your saved goal, experience level, schedule and equipment. Update
+              these as you learn more.
+            </p>
+          </details>
+        </article>
+      </section>
     </main>
   );
 }

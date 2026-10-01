@@ -16,11 +16,20 @@ export function PracticePlanner({
   seed,
   selectedSession,
   notionConnected,
+  notice,
+  nextPractice,
 }: {
   initial: WeekView;
   seed: WeekContent;
   selectedSession?: string;
   notionConnected: boolean;
+  notice?: string;
+  nextPractice: {
+    weekId: string;
+    sessionId: string;
+    date: string;
+    time: string;
+  } | null;
 }) {
   const query = useSearchParams();
   const time = useTimeFormat();
@@ -216,6 +225,11 @@ export function PracticePlanner({
           </span>
         </div>
       </header>
+      {notice && (
+        <p className="journey-notice" role="status">
+          {notice}
+        </p>
+      )}
       {initial.stale && (
         <p role="alert">
           Your roadmap changed.{" "}
@@ -532,6 +546,25 @@ export function PracticePlanner({
                 saves this version for coaching; you can return later to make
                 changes.
               </p>
+              {ready && nextPractice && (
+                <section className="next-journey-card no-print">
+                  <div>
+                    <p className="eyebrow">AFTER PRACTICE 1</p>
+                    <h2>Carry what you learn into Practice 2.</h2>
+                    <p>
+                      After practice, note what worked and what needs another
+                      repetition. Use that as your request when you prepare the
+                      next plan.
+                    </p>
+                  </div>
+                  <Link
+                    className="button-link action-button"
+                    href={`/weeks/${nextPractice.weekId}?session=${nextPractice.sessionId}`}
+                  >
+                    Plan Practice 2 →
+                  </Link>
+                </section>
+              )}
             </>
           )}
         </>
