@@ -63,19 +63,13 @@ it("shows a recoverable message when the provider rejects authorization", async 
     error: { message: "synthetic provider detail" },
   });
   const form = new FormData();
-  form.set("adult", "on");
   expect((await signInWithGoogle({ error: "" }, form)).error).toContain(
     "unavailable",
   );
   expect(m.start).toHaveBeenCalledOnce();
 });
-it("requires adult attestation and requests only Google with fixed callback", async () => {
+it("requests only Google with a fixed callback", async () => {
   const form = new FormData();
-  expect((await signInWithGoogle({ error: "" }, form)).error).toContain(
-    "adult",
-  );
-  expect(m.start).not.toHaveBeenCalled();
-  form.set("adult", "on");
   await expect(signInWithGoogle({ error: "" }, form)).rejects.toThrow(
     "redirect:https://auth.example.invalid/auth/v1/authorize",
   );
@@ -93,7 +87,6 @@ it("rejects an unexpected authorization origin", async () => {
     error: null,
   });
   const f = new FormData();
-  f.set("adult", "on");
   expect((await signInWithGoogle({ error: "" }, f)).error).toContain(
     "unavailable",
   );

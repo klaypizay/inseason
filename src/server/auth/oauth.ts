@@ -4,10 +4,10 @@ import { authFlowClient, authRedirectUrl } from "./signup-client";
 
 export async function signInWithGoogle(
   _state: { error: string },
-  form: FormData,
+  _form: FormData,
 ) {
-  if (form.get("adult") !== "on")
-    return { error: "Confirm you are an adult coach before continuing." };
+  void _state;
+  void _form;
   let destination: string;
   let stage = "oauth-client";
   try {
