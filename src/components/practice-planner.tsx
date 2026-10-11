@@ -11,6 +11,27 @@ import { WeekEditor } from "./week-editor";
 import { Overlay } from "./overlay";
 import { AIGenerationOverlay } from "./ai-generation-overlay";
 import { exportPracticeToNotion } from "../server/notion/actions";
+const elapsedTime = (minutes: number) =>
+  `${Math.floor(minutes / 60)}:${String(minutes % 60).padStart(2, "0")}`;
+const runOfShow = (block: PracticePlan["blocks"][number]) => {
+  if (block.steps?.length) return block.steps;
+  const instructions = [
+    `Set up and demonstrate: ${block.setup}`,
+    `Guided repetitions: ${block.cues}`,
+    `Progress or simplify: ${block.simpler}`,
+    `Apply and recap: ${block.purpose}`,
+  ].slice(0, Math.min(4, block.minutes));
+  let remaining = block.minutes;
+  return instructions.map((instruction, index) => {
+    const phasesLeft = instructions.length - index - 1;
+    const minutes =
+      index === instructions.length - 1
+        ? remaining
+        : Math.max(1, Math.round(remaining / (phasesLeft + 1)));
+    remaining -= minutes;
+    return { minutes, instruction };
+  });
+};
 export function PracticePlanner({
   initial,
   seed,
@@ -60,12 +81,18 @@ export function PracticePlanner({
     [viewMode, setViewMode] = useState<
       "flow" | "table" | "condensed" | "detailed"
     >("flow"),
+    [focusedBlockId, setFocusedBlockId] = useState<string | null>(null),
     [dragging, setDragging] = useState<string | null>(null),
     [pending, start] = useTransition();
   const context = initial.version?.context ?? initial.context;
   const session = context.sessions.find((s) => s.id === selected),
     plan = content.practices?.find((p) => p.sessionId === selected);
   const savedPlan = seed.practices?.find((p) => p.sessionId === selected);
+  const focusedBlock =
+    plan?.blocks.find((item) => item.id === focusedBlockId) ?? plan?.blocks[0];
+  const focusedIndex = focusedBlock
+    ? (plan?.blocks.findIndex((item) => item.id === focusedBlock.id) ?? 0)
+    : 0;
   const block = plan?.blocks.find((b) => b.id === editing);
   const savedBlock = savedPlan?.blocks.find((b) => b.id === editing);
   const drillLocked = !!(block?.locked || savedBlock?.locked);
@@ -152,6 +179,38 @@ export function PracticePlanner({
           : "This drill could not be moved.",
       );
     }
+  }
+  function setBlockMinutes(blockId: string, minutes: number) {
+    if (!plan || !Number.isInteger(minutes) || minutes < 1) return;
+    changePlan({
+      ...plan,
+      blocks: plan.blocks.map((item) => {
+        if (item.id !== blockId) return item;
+        if (item.steps && minutes < item.steps.length) return item;
+        if (!item.steps?.length) return { ...item, minutes };
+        const oldTotal = item.steps.reduce(
+          (sum, step) => sum + step.minutes,
+          0,
+        );
+        let remaining = minutes;
+        const steps = item.steps.map((step, index) => {
+          const stepsLeft = item.steps!.length - index - 1;
+          const nextMinutes =
+            index === item.steps!.length - 1
+              ? remaining
+              : Math.max(
+                  1,
+                  Math.min(
+                    remaining - stepsLeft,
+                    Math.round((step.minutes / oldTotal) * minutes),
+                  ),
+                );
+          remaining -= nextMinutes;
+          return { ...step, minutes: nextMinutes };
+        });
+        return { ...item, minutes, steps };
+      }),
+    });
   }
   function action(
     work: () => Promise<{ id?: string; error?: string }>,
@@ -460,6 +519,267 @@ export function PracticePlanner({
                     </tbody>
                   </table>
                 </div>
+              ) : viewMode === "flow" && focusedBlock ? (
+                <div className="practice-run-layout">
+                  <aside
+                    className="practice-activity-rail"
+                    aria-label="Activities"
+                  >
+                    <div className="practice-pane-heading">
+                      <strong>Activities</strong>
+                      <span>{plan.blocks.length}</span>
+                    </div>
+                    <ol>
+                      {plan.blocks.map((item, index) => {
+                        const from = plan.blocks
+                          .slice(0, index)
+                          .reduce((sum, block) => sum + block.minutes, 0);
+                        const orderLocked = plan.blocks.some(
+                          (block) => block.locked,
+                        );
+                        return (
+                          <li
+                            key={item.id}
+                            className={`${focusedBlock.id === item.id ? "active" : ""}${dragging === item.id ? " dragging" : ""}`}
+                            onDragOver={(event) => event.preventDefault()}
+                            onDrop={(event) => {
+                              event.preventDefault();
+                              const moving =
+                                dragging ||
+                                event.dataTransfer.getData("text/plain");
+                              if (moving && moving !== item.id)
+                                moveBlock(moving, index);
+                              setDragging(null);
+                            }}
+                          >
+                            <button
+                              type="button"
+                              className="activity-select"
+                              onClick={() => setFocusedBlockId(item.id)}
+                              aria-pressed={focusedBlock.id === item.id}
+                            >
+                              <span className="activity-start">
+                                {elapsedTime(from)}
+                              </span>
+                              <span>
+                                <strong>{item.title}</strong>
+                                <small>{item.minutes} min</small>
+                              </span>
+                            </button>
+                            {editable && (
+                              <div className="rail-order-controls no-print">
+                                <span
+                                  className="drag-handle"
+                                  aria-hidden="true"
+                                  draggable={!pending && !run && !orderLocked}
+                                  onDragStart={(event) => {
+                                    event.dataTransfer.effectAllowed = "move";
+                                    event.dataTransfer.setData(
+                                      "text/plain",
+                                      item.id,
+                                    );
+                                    setDragging(item.id);
+                                  }}
+                                  onDragEnd={() => setDragging(null)}
+                                >
+                                  ⠿
+                                </span>
+                                <button
+                                  type="button"
+                                  className="icon-button"
+                                  disabled={
+                                    pending ||
+                                    !!run ||
+                                    index === 0 ||
+                                    orderLocked
+                                  }
+                                  aria-label={`Move ${item.title} earlier`}
+                                  onClick={() => moveBlock(item.id, index - 1)}
+                                >
+                                  ↑
+                                </button>
+                                <button
+                                  type="button"
+                                  className="icon-button"
+                                  disabled={
+                                    pending ||
+                                    !!run ||
+                                    index === plan.blocks.length - 1 ||
+                                    orderLocked
+                                  }
+                                  aria-label={`Move ${item.title} later`}
+                                  onClick={() => moveBlock(item.id, index + 1)}
+                                >
+                                  ↓
+                                </button>
+                              </div>
+                            )}
+                          </li>
+                        );
+                      })}
+                    </ol>
+                    <div className="practice-total">
+                      <span>Total practice time</span>
+                      <strong>
+                        {total} / {session.minutes} min
+                      </strong>
+                    </div>
+                  </aside>
+                  <article className="practice-instruction-pane">
+                    <div className="practice-pane-heading">
+                      <span>
+                        {String(focusedIndex + 1).padStart(2, "0")} /{" "}
+                        {String(plan.blocks.length).padStart(2, "0")}
+                      </span>
+                      {editable && (
+                        <button
+                          type="button"
+                          className="secondary no-print"
+                          onClick={() => {
+                            setEditing(focusedBlock.id);
+                            setEditTab("manual");
+                            setDrillBrief("");
+                            setError("");
+                          }}
+                        >
+                          Edit activity
+                        </button>
+                      )}
+                    </div>
+                    <div className="focused-activity-title">
+                      <div>
+                        <p className="eyebrow">CURRENT ACTIVITY</p>
+                        <h2>{focusedBlock.title}</h2>
+                      </div>
+                      <label className="focused-duration no-print">
+                        Duration{" "}
+                        <span>
+                          <input
+                            type="number"
+                            min={focusedBlock.steps?.length ?? 1}
+                            max={session.minutes}
+                            value={focusedBlock.minutes}
+                            disabled={
+                              !editable ||
+                              pending ||
+                              !!run ||
+                              focusedBlock.locked ||
+                              !!savedPlan?.blocks.find(
+                                (saved) =>
+                                  saved.id === focusedBlock.id && saved.locked,
+                              )
+                            }
+                            onChange={(event) =>
+                              setBlockMinutes(
+                                focusedBlock.id,
+                                Number(event.target.value),
+                              )
+                            }
+                          />{" "}
+                          min
+                        </span>
+                      </label>
+                      <strong className="print-only">
+                        {focusedBlock.minutes} min
+                      </strong>
+                    </div>
+                    <section className="practice-instruction">
+                      <p className="eyebrow">INSTRUCTION</p>
+                      <p>{focusedBlock.setup}</p>
+                      <p>{focusedBlock.cues}</p>
+                    </section>
+                    <ol className="practice-run-steps">
+                      {runOfShow(focusedBlock).map((step, index) => (
+                        <li key={`${focusedBlock.id}-step-${index}`}>
+                          <span>{index + 1}</span>
+                          <p>
+                            {step.instruction}
+                            <small>{step.minutes} min</small>
+                          </p>
+                        </li>
+                      ))}
+                    </ol>
+                    <details open>
+                      <summary>Key points</summary>
+                      <ul className="coach-point-list">
+                        {focusedBlock.cues
+                          .split(/(?<=[.!?])\s+/)
+                          .filter(Boolean)
+                          .map((cue, index) => (
+                            <li key={index}>{cue}</li>
+                          ))}
+                      </ul>
+                    </details>
+                    <details>
+                      <summary>Variation</summary>
+                      <p>{focusedBlock.simpler}</p>
+                    </details>
+                    <details>
+                      <summary>Why it is in the plan</summary>
+                      <p>{focusedBlock.purpose}</p>
+                    </details>
+                    <div className="focused-navigation no-print">
+                      <button
+                        type="button"
+                        className="secondary"
+                        disabled={focusedIndex === 0}
+                        onClick={() =>
+                          setFocusedBlockId(
+                            plan.blocks[focusedIndex - 1]?.id ?? null,
+                          )
+                        }
+                      >
+                        ← Previous
+                      </button>
+                      <button
+                        type="button"
+                        disabled={focusedIndex === plan.blocks.length - 1}
+                        onClick={() =>
+                          setFocusedBlockId(
+                            plan.blocks[focusedIndex + 1]?.id ?? null,
+                          )
+                        }
+                      >
+                        Next activity →
+                      </button>
+                    </div>
+                  </article>
+                  <aside className="practice-coaching-board">
+                    <div className="practice-pane-heading">
+                      <strong>Coaching board</strong>
+                      <span>At a glance</span>
+                    </div>
+                    <div className="board-visual" aria-hidden="true">
+                      <span className="board-zone board-zone-one">1</span>
+                      <span className="board-arrow">→</span>
+                      <span className="board-zone board-zone-two">2</span>
+                      <span className="board-arrow">→</span>
+                      <span className="board-zone board-zone-three">3</span>
+                    </div>
+                    <h3>{focusedBlock.title}</h3>
+                    <p>{focusedBlock.setup}</p>
+                    <dl>
+                      <div>
+                        <dt>Players</dt>
+                        <dd>{focusedBlock.players}+</dd>
+                      </div>
+                      {focusedBlock.hoops > 0 && (
+                        <div>
+                          <dt>Hoops</dt>
+                          <dd>{focusedBlock.hoops}</dd>
+                        </div>
+                      )}
+                      <div>
+                        <dt>Time</dt>
+                        <dd>{focusedBlock.minutes} min</dd>
+                      </div>
+                    </dl>
+                    <div className="board-callout">
+                      <strong>Coach focus</strong>
+                      <p>{focusedBlock.cues}</p>
+                    </div>
+                  </aside>
+                </div>
               ) : (
                 <ol
                   className={`practice-timeline practice-view-${viewMode}`}
@@ -560,7 +880,7 @@ export function PracticePlanner({
                                 <span>
                                   <input
                                     type="number"
-                                    min={1}
+                                    min={b.steps?.length ?? 1}
                                     max={session.minutes}
                                     value={b.minutes}
                                     disabled={
@@ -579,14 +899,7 @@ export function PracticePlanner({
                                         minutes < 1
                                       )
                                         return;
-                                      changePlan({
-                                        ...plan,
-                                        blocks: plan.blocks.map((item) =>
-                                          item.id === b.id
-                                            ? { ...item, minutes }
-                                            : item,
-                                        ),
-                                      });
+                                      setBlockMinutes(b.id, minutes);
                                     }}
                                   />
                                   min

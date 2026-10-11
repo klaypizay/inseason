@@ -34,7 +34,6 @@ test("coach goes from roadmap review to a saved, editable practice", async ({
     await page.goto("/login");
     await page.getByLabel("Email", { exact: true }).fill(email);
     await page.getByLabel("Password", { exact: true }).fill(password);
-    await page.getByRole("checkbox").check();
     await page.getByRole("button", { name: "Sign in" }).click();
     await expect(page).toHaveURL(/today$/, { timeout: 30000 });
     // Finish the fixture's existing review before requesting a fresh roadmap.

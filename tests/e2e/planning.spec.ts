@@ -14,7 +14,6 @@ test("assessment and roadmap drafts survive refresh without activating a plan", 
   await page
     .getByLabel("Password", { exact: true })
     .fill(process.env.E2E_COACH_A_PASSWORD!);
-  await page.getByRole("checkbox").check();
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page).toHaveURL(/today$/, { timeout: 20000 });
   await page.goto("/season");

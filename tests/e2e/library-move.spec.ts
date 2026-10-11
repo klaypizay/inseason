@@ -57,7 +57,6 @@ test("coach organizes multiple roadmaps with folder cards and drag or move contr
     await page.goto("/login");
     await page.getByLabel("Email", { exact: true }).fill(email);
     await page.getByLabel("Password", { exact: true }).fill(password);
-    await page.getByRole("checkbox").check();
     await page.getByRole("button", { name: "Sign in" }).click();
     await expect(page).toHaveURL(/today$/, { timeout: 20000 });
     const second = await generateSeason(

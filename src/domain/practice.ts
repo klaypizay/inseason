@@ -2,6 +2,10 @@ import { z } from "zod";
 import { PlanRuleError } from "./roadmap";
 import type { WeekContext } from "./week";
 const note = z.string().trim().min(1).max(400);
+const practiceStepSchema = z.strictObject({
+  minutes: z.number().int().min(1).max(120),
+  instruction: note,
+});
 export const practiceBlockSchema = z.strictObject({
   id: z.uuid(),
   title: z.string().trim().min(1).max(100),
@@ -10,6 +14,7 @@ export const practiceBlockSchema = z.strictObject({
   cues: note,
   simpler: note,
   purpose: note,
+  steps: z.array(practiceStepSchema).min(1).max(8).optional(),
   players: z.number().int().min(1).max(100),
   hoops: z.number().int().min(0).max(20),
   locked: z.boolean(),
@@ -18,6 +23,16 @@ export const practiceSchema = z.strictObject({
   sessionId: z.uuid(),
   title: z.string().trim().min(1).max(100),
   blocks: z.array(practiceBlockSchema).min(1).max(10),
+});
+export const generatedPracticeSchema = practiceSchema.extend({
+  blocks: z
+    .array(
+      practiceBlockSchema.extend({
+        steps: z.array(practiceStepSchema).min(1).max(8),
+      }),
+    )
+    .min(1)
+    .max(10),
 });
 export type PracticePlan = z.infer<typeof practiceSchema>;
 export function reorderPracticeBlocks(

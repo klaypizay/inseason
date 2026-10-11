@@ -1241,6 +1241,14 @@ it("keeps practice revision requests in untrusted context and uses a complete st
     expect(content.objectives).toEqual(previous.objectives);
     expect(content.allocations).toEqual(previous.allocations);
     const plan = content.practices![0];
+    expect(plan.blocks.every((block) => block.steps?.length)).toBe(true);
+    expect(
+      plan.blocks.every(
+        (block) =>
+          block.steps!.reduce((sum, step) => sum + step.minutes, 0) ===
+          block.minutes,
+      ),
+    ).toBe(true);
     const drillIntent = { ...input.practiceIntent, blockId: plan.blocks[0].id };
     await openAIWeekProvider("synthetic-test-key").generate(
       { ...input, previous: content, practiceIntent: drillIntent },

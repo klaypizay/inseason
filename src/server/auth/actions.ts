@@ -8,18 +8,15 @@ import { issueSession, revokeSession } from "./session";
 const credentials = z.object({
   email: z.email().max(254),
   password: z.string().min(1).max(256),
-  adult: z.literal("on"),
 });
 export async function signIn(_state: { error: string }, form: FormData) {
   const parsed = credentials.safeParse({
     email: form.get("email"),
     password: form.get("password"),
-    adult: form.get("adult"),
   });
   if (!parsed.success)
     return {
-      error:
-        "Enter your email and password and confirm you are an adult coach.",
+      error: "Enter your email and password.",
     };
   try {
     const allowed = await database.transaction(async (q) => {

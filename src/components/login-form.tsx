@@ -23,10 +23,6 @@ export function LoginForm() {
         maxLength={256}
         required
       />
-      <label className="check">
-        <input name="adult" type="checkbox" required /> I am an adult coach (18
-        or older).
-      </label>
       <p role="alert" className="error">
         {state.error}
       </p>

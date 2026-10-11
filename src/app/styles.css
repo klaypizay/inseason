@@ -2371,6 +2371,278 @@ textarea:disabled {
 .practice-table tr:last-child td {
   border-bottom: 0;
 }
+.practice-run-layout {
+  display: grid;
+  grid-template-columns: minmax(250px, 0.78fr) minmax(380px, 1.25fr) minmax(
+      280px,
+      0.95fr
+    );
+  min-height: 680px;
+  margin-bottom: 18px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  overflow: hidden;
+  background: var(--paper);
+}
+.practice-run-layout > * {
+  min-width: 0;
+  padding: 20px;
+}
+.practice-run-layout > * + * {
+  border-left: 1px solid var(--line);
+}
+.practice-pane-heading {
+  display: flex;
+  min-height: 38px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.practice-activity-rail {
+  display: flex;
+  flex-direction: column;
+}
+.practice-activity-rail ol {
+  flex: 1;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.practice-activity-rail li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 5px 9px 10px;
+  border-bottom: 1px solid var(--line);
+  border-left: 4px solid transparent;
+}
+.practice-activity-rail li.active {
+  border-left-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, var(--paper));
+}
+.activity-select {
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+}
+.activity-select:hover {
+  background: transparent;
+}
+.activity-select > span:last-child {
+  display: grid;
+  gap: 3px;
+}
+.activity-select strong {
+  overflow-wrap: anywhere;
+  font-size: 15px;
+}
+.activity-select small {
+  color: var(--muted);
+}
+.activity-start {
+  padding: 7px 5px;
+  border-radius: 8px;
+  background: var(--surface-tint);
+  font-size: 13px;
+  font-weight: 800;
+  text-align: center;
+}
+.rail-order-controls {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.rail-order-controls .icon-button {
+  width: 26px;
+  height: 26px;
+}
+.practice-total {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+  font-size: 14px;
+}
+.focused-activity-title {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 22px 0 14px;
+}
+.focused-activity-title h2 {
+  margin: 0;
+  font-size: clamp(28px, 3vw, 42px);
+}
+.focused-duration {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+}
+.focused-duration span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.focused-duration input {
+  width: 72px;
+  padding: 8px;
+  color: var(--action);
+  font-size: 16px;
+  font-weight: 800;
+}
+.practice-instruction {
+  padding: 12px 0 16px;
+}
+.practice-instruction p:not(.eyebrow) {
+  margin: 6px 0;
+  font-size: 16px;
+  line-height: 1.55;
+}
+.practice-run-steps {
+  display: grid;
+  gap: 12px;
+  padding: 0;
+  list-style: none;
+}
+.practice-run-steps li {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  align-items: start;
+  gap: 12px;
+}
+.practice-run-steps li > span {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--ink);
+  color: white;
+  font-weight: 800;
+}
+.practice-run-steps p {
+  margin: 5px 0 0;
+}
+.practice-run-steps small {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-weight: 700;
+}
+.practice-instruction-pane details {
+  padding: 13px 0;
+  border-top: 1px solid var(--line);
+}
+.practice-instruction-pane summary {
+  cursor: pointer;
+  font-weight: 800;
+}
+.coach-point-list {
+  display: grid;
+  gap: 7px;
+  padding: 12px 0 0 22px;
+}
+.coach-point-list li::marker {
+  color: var(--accent);
+}
+.focused-navigation {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 22px;
+}
+.practice-coaching-board {
+  background: color-mix(in srgb, var(--surface-tint) 60%, white);
+}
+.board-visual {
+  display: flex;
+  min-height: 250px;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin: 20px 0;
+  border: 2px solid var(--ink);
+  border-radius: 14px;
+  background: repeating-linear-gradient(
+    90deg,
+    #f2e4c6 0 36px,
+    #ecdab4 36px 38px
+  );
+}
+.board-zone {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border: 3px solid var(--ink);
+  border-radius: 50%;
+  background: white;
+  font-weight: 900;
+}
+.board-zone-two {
+  transform: translateY(-48px);
+}
+.board-arrow {
+  color: var(--action);
+  font-size: 34px;
+  font-weight: 900;
+}
+.practice-coaching-board h3 {
+  margin-bottom: 6px;
+}
+.practice-coaching-board > p {
+  color: var(--muted);
+  line-height: 1.5;
+}
+.practice-coaching-board dl {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 18px 0;
+}
+.practice-coaching-board dl div {
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: white;
+}
+.practice-coaching-board dt {
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+}
+.practice-coaching-board dd {
+  margin: 3px 0 0;
+  font-weight: 800;
+}
+.board-callout {
+  padding: 15px;
+  border-left: 4px solid var(--accent);
+  background: white;
+}
+.board-callout p {
+  margin-bottom: 0;
+}
 .practice-step {
   margin: 0 0 4px !important;
   color: #687970;
@@ -2508,6 +2780,35 @@ textarea:disabled {
   }
   .practice-plan-heading {
     align-items: flex-start;
+    flex-direction: column;
+  }
+}
+@media (max-width: 1180px) {
+  .practice-run-layout {
+    grid-template-columns: minmax(230px, 0.75fr) minmax(0, 1.4fr);
+  }
+  .practice-coaching-board {
+    grid-column: 1 / -1;
+    border-top: 1px solid var(--line);
+    border-left: 0 !important;
+  }
+  .board-visual {
+    min-height: 180px;
+  }
+}
+@media (max-width: 760px) {
+  .practice-run-layout {
+    display: block;
+  }
+  .practice-run-layout > * + * {
+    border-top: 1px solid var(--line);
+    border-left: 0;
+  }
+  .practice-activity-rail ol {
+    max-height: 340px;
+    overflow-y: auto;
+  }
+  .focused-activity-title {
     flex-direction: column;
   }
 }

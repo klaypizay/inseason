@@ -31,7 +31,6 @@ test("coach saves date and time settings, names and folders, then trashes and re
     await page.goto("/login");
     await page.getByLabel("Email", { exact: true }).fill(email);
     await page.getByLabel("Password", { exact: true }).fill(password);
-    await page.getByRole("checkbox").check();
     await page.getByRole("button", { name: "Sign in" }).click();
     await expect(page).toHaveURL(/today$/, { timeout: 20000 });
     await page.getByRole("button", { name: "Settings", exact: true }).click();

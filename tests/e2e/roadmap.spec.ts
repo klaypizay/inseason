@@ -38,7 +38,6 @@ test("coach edits, accepts, locks, shifts and recovers a roadmap without AI call
     await page.goto("/login");
     await page.getByLabel("Email", { exact: true }).fill(email);
     await page.getByLabel("Password", { exact: true }).fill(password);
-    await page.getByRole("checkbox").check();
     await page.getByRole("button", { name: "Sign in" }).click();
     await expect(page).toHaveURL(/today$/, { timeout: 20000 });
     await page.goto("/drafts/" + fixture.generationId, {
