@@ -15,7 +15,6 @@ test("two managed coaches see only their own seeded team", async ({ page }) => {
     await page
       .getByLabel("Password", { exact: true })
       .fill(process.env[`E2E_COACH_${suffix}_PASSWORD`]!);
-    await page.getByRole("checkbox").check();
     await page.getByRole("button", { name: "Sign in" }).click();
     await expect(page.getByText(own, { exact: true })).toBeVisible({
       timeout: 20000,
@@ -57,7 +56,6 @@ test("sign-in failure is actionable and does not show a successful workspace", a
     .getByLabel("Password", { exact: true })
     .fill("invalid-synthetic-password");
   const emailForm = page.getByRole("form", { name: "Email sign in" });
-  await emailForm.getByRole("checkbox").check();
   await emailForm.getByRole("button", { name: "Sign in" }).click();
   await expect(emailForm.getByRole("alert")).toContainText(
     /unavailable|Unable to sign in|Too many/,
@@ -82,7 +80,6 @@ test("managed login, refresh and revoked cookie replay", async ({
   await page
     .getByLabel("Password", { exact: true })
     .fill(process.env.E2E_COACH_PASSWORD!);
-  await page.getByRole("checkbox").check();
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(
     page.getByRole("button", { name: "Sign out", exact: true }),
